@@ -17,7 +17,6 @@ class LoginRegisterPresenter {
   password = null
   option = null
 
-
   observables = {
     email: observable,
     password: observable,
@@ -36,7 +35,7 @@ class LoginRegisterPresenter {
   }
     
   get vm () {
-    return useMobX(this, this.observables)
+    return useMobX(this, this.observables, { attach: 'vm' })
   }
 
   async login () {}
