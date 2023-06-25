@@ -1,11 +1,4 @@
 import { describe, it, beforeEach, expect, vi } from 'vitest'
-// import { inject, injectable } from 'inversify'
-// import { action, makeObservable, observable, computed, comparer } from 'mobX'
-// import { AuthenticationRepository } from './Helpers/Authentication/AuthenticationRepository'
-// import { MessagesPresenter } from './Helpers/Core/Messages/MessagesPresenter'
-// import { MessagesRepository } from './Helpers/Core/Messages/MessagesRepository'
-// import { Router } from './Helpers/Routing/Router'
-// import { useMobX, notify } from '@/useMobX';
 import { AppTestHarness } from './Helpers/AppTestHarness'
 import { LoginRegisterPresenter } from "./Helpers/Authentication/LoginRegisterPresenter";
 import { notify } from "../useMobX.js";
@@ -259,41 +252,47 @@ describe('------------------- MobX Reactivity ------------------', () => {
   describe('mobx object/array reassignment & maintain reactivity', async () => {
 
     it('mobx reassign array at root', async () => {
-      vm._arrayReassign = [{ newProp: 1 }]
+      presenter._arrayReassign = [{ newProp: 1 }]
       expect(vm._arrayReassign[0].newProp).toBe(1)
+
       vm._arrayReassign[0].newProp = 2
       expect(vm._arrayReassign[0].newProp).toBe(2)
     })
 
-    it('vue reassign whole observable object at root', async () => {
-      vm._objectReassign = { prop: { prop: true } }
-      await wait()
+    it('mobx reassign whole observable object at root', async () => {
+      presenter._objectReassign = { prop: { prop: true } }
       expect(vm._objectReassign.prop.prop).toBe(true)
+
       vm._objectReassign.prop.prop = false
       expect(vm._objectReassign.prop.prop).toBe(false)
     })
 
-    it('vue reassign Map', async() => {
-      vm.mapObject = new ObservableMap([[
-        'prop', 1
-      ]])
-      await wait()
+    it('mobx reassign Map', async() => {
+      presenter.mapObject = new Map()
+      presenter.mapObject.set('prop', 1)
       expect(vm.mapObject.get('prop')).toBe(1)
+
+
       vm.mapObject.set('prop', 2)
-      expect(vm.mapObject.get('prop')).toBe(2)
+      expect(presenter.mapObject.get('prop')).toBe(2)
     })
 
-    it('vue reassign Set', async() => {
-      vm.setObject = new ObservableSet([1, 2])
-      await wait()
-      vm.setObject.add(3)
-      let i = 0
-      vm.setObject.forEach(el => {
+    it('mobx reassign Set', async() => {
+      presenter.setObject = new Set()
+      presenter.setObject.add(1)
+      presenter.setObject.add(2)
+      presenter.setObject.add(3)
+
+      let i = 0, value
+
+      const iterator = vm.setObject.entries();
+      for (const entry of iterator) {
         i++
-        if (i === 3) {
-          expect(el).toBe(3)
-        }
-      })
+        value = entry
+      }
+      expect(i).toBe(3)
+      expect(value[0]).toBe(3)
+
     })
   })
 
@@ -455,6 +454,7 @@ describe('------------------- MobX Reactivity ------------------', () => {
         vm._objectReassign = { prop: { prop: true } }
         await wait()
         expect(presenter._objectReassign.prop.prop).toBe(true)
+
         presenter._objectReassign.prop.prop = false
         expect(vm._objectReassign.prop.prop).toBe(false)
       })
@@ -465,6 +465,7 @@ describe('------------------- MobX Reactivity ------------------', () => {
         ]])
         await wait()
         expect(presenter.mapObject.get('prop')).toBe(1)
+
         presenter.mapObject.set('prop', 2)
         expect(vm.mapObject.get('prop')).toBe(2)
       })
@@ -480,10 +481,19 @@ describe('------------------- MobX Reactivity ------------------', () => {
             expect(el).toBe(3)
           }
         })
+
+        let j = 0;
+        vm.setObject.forEach(el => {
+          j++
+          if (j === 3) {
+            expect(el).toBe(3)
+          }
+        })
       })
     })
 
     describe('vue Map/Set propagation', () => {
+
       describe('vue Map propagation', () => {
 
         it('vue add to Map', async () => {
@@ -497,6 +507,8 @@ describe('------------------- MobX Reactivity ------------------', () => {
 
         it('vue delete from Map', async () => {
           vm.mapObject.set(1, 'foo')
+          expect(isReactive(vm.mapObject)).toBe(true)
+          expect(presenter.mapObject.get(1)).toBe('foo')
           vm.mapObject.delete(1)
           expect(presenter.mapObject.get(1)).toBeUndefined()
         })

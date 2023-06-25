@@ -11,7 +11,10 @@ yarn add vue-mobx-finegrained
 
 ## Usage
 ```js
-class LoginRegisterPresenter {
+// LoginRegisterPresenter.js
+import { useMobX } from 'vue-mobx-finegrained'
+
+export class LoginRegisterPresenter {
   
   email = null
   password = null
@@ -29,7 +32,6 @@ class LoginRegisterPresenter {
     logOut: action
   }
   
-
   constructor () {
     makeObservable(this, this.observables)
   }
@@ -68,7 +70,11 @@ class LoginRegisterPresenter {
 <script setup>
    import { LoginRegisterPresenter } from "./LoginRegisterPresenter.js";
 
-   const vm = new LoginRegisterPresenter().vm;
+   // Instantiate the presenter
+   const presenter = new LoginRegisterPresenter()
+   
+   // Vue shadow ViewModel(vm) reactive() object 
+   const vm = presenter.vm
 </script>
 
 <template>
@@ -83,13 +89,30 @@ class LoginRegisterPresenter {
 ```
 
 ## Features
-- Changing values in Presenter (changes the Vue(vm) state)
-- Changing values in Vue(vm) state, changes the Presenter
-- Getters and setters are supported
+- Changing values in MobX(presenter) changes the Vue(vm) state
+- Changing values in Vue(vm) state changes the MobX(presenter)
+- Getters and Setters are supported
+- ES6+ Maps and Sets are supported, see more instructions below*
 - Functions are mirrored but use the Presenter context
-- *Caveat: All functions in vm are converted to async to await for Vue values to update the Presenter, before using the values (this is because Vues' `watch()` function does not run synchronously)
-- MobX runs synchronously, so changing the Presenter values, immediatedly reflects into the Vue
-- Deep changes are tracked both ways by MobX and Vue (using `deepObserve()`in MobX & `watch(..., { deep: true })` in Vue)
+- Deep changes are tracked both ways by MobX and Vue (using `deepObserve()` in MobX & `watch(..., { deep: true })` in Vue)
+- MobX `deepObserve()` propagates changes to objects & arrays to Vue via atomic changes surgically editing only parts of the object rather than overwriting whole objects in this aspect it makes it superior to current Vue implementation of `watch()` (Vues' `watch()` function also runs asynchronously and does not provide atomic changes when objects change, it just gives us the new Object and old Object which are actually the same object because the comparison is done by reference, and if you want to make a diff of the changes that happened, you have to do it manually)
+- *Caveat: All functions in vm are converted to async functions because they have to await for Vue values to update the Presenter before using those values, before using the inner object property values (this is because Vues' `watch()` function does not run synchronously) while MobX runs synchronously, so changing the Presenter values immediatedly reflects into the Vue (which is really good).
+
+## Handling Maps
+```js
+// Don't do this, this will lose mutual reactivity of the Map between MobX & Vue
+vm.mapObject = new Map([...])
+
+// Do this instead to maintain mutual reactivity between MobX & Vue, 
+// this is because (MobX converts Maps to an ObservableMap on initialization)
+vm.mapObject = new ObservableMap([...])
+
+// But, note that:
+// If you are doing reassignment from the Presenter side
+// then doing this is fine:
+presenter.mapObject = new Map([...])
+// because MobX recognizes the change and converts the Map to an ObservableMap() under the hood
+```
 
 ### Run Unit Tests with [Vitest](https://vitest.dev/)
 

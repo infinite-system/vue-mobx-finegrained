@@ -42,7 +42,7 @@ export function fullClone (obj) {
     return obj;
   }
 
-  let cloned = obj instanceof Date ? new Date(obj) : obj.constructor();
+  let cloned = obj instanceof Date ? new Date(obj) : new obj.constructor();
 
   if (Array.isArray(obj)) {
     const objLength = obj.length;
@@ -54,6 +54,9 @@ export function fullClone (obj) {
     for (let key in obj) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
         obj['__isActiveClone__'] = null;
+        // if (cloned === undefined){
+        //   console.log('underfined..', new obj.constructor())
+        // }
         cloned[key] = fullClone(obj[key]);
         delete obj['__isActiveClone__'];
 
@@ -175,7 +178,12 @@ export function useMobX<Store extends Record<string, any>> (obj, observables, op
         }
         else {
           // Handle object
-          state[observable] = markRaw(fullClone(newValue))
+          state[observable] =
+            newValue instanceof ObservableMap || newValue instanceof ObservableSet
+              // If it's an MobX's ObservbaleMap, copy reference only!
+              // Otherwise the reactivity gets lost
+              ? markRaw(newValue)
+              : markRaw(fullClone(newValue))
         }
       }
       else {
@@ -184,8 +192,12 @@ export function useMobX<Store extends Record<string, any>> (obj, observables, op
       }
     }
     else {
-      // Full clone the property without marking it raw
-      state[observable] = fullClone(newValue)
+      state[observable] = newValue instanceof ObservableMap || newValue instanceof ObservableSet
+        // If it's an MobX's ObservbaleMap, copy reference only!
+        // Otherwise the reactivity Observable values get lost
+        ? newValue
+        // Full clone the property without marking it raw
+        : fullClone(newValue)
     }
   }
 
@@ -203,7 +215,6 @@ export function useMobX<Store extends Record<string, any>> (obj, observables, op
         delete ref[change.name]
         break;
       case 'delete':
-        // console.log('change', change)
         ref.delete(change.name)
         break;
       case 'splice':
@@ -258,10 +269,7 @@ export function useMobX<Store extends Record<string, any>> (obj, observables, op
     opts.raw.forEach(prop => rawMap[prop] = true)
   }
 
-  // Determine if property should be watched by Vue.
-  // Getters, setters, computed and functions
-  // should not be watched by Vue, because
-  // those values cannot be re-assigned
+  // Determine if property should be watched by Vue & MobX
   function shouldWatch (obj, magicProps, observables, observable) {
     return typeof magicProps.get[observable] !== 'undefined' || typeof obj[observable] !== 'function'
   }
