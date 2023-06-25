@@ -96,7 +96,7 @@ export class LoginRegisterPresenter {
 - Functions are mirrored but use the Presenter context
 - Deep changes are tracked both ways by MobX and Vue (using `deepObserve()` in MobX & `watch(..., { deep: true })` in Vue)
 - MobX `deepObserve()` propagates changes to objects & arrays to Vue via atomic changes surgically editing only parts of the object rather than overwriting whole objects in this aspect it makes it superior to current Vue implementation of `watch()` (Vues' `watch()` function also runs asynchronously and does not provide atomic changes when objects change, it just gives us the new Object and old Object which are actually the same object because the comparison is done by reference, and if you want to make a diff of the changes that happened, you have to do it manually)
-- *Caveat: All functions in vm are converted to async functions because they have to await for Vue values to update the Presenter before using those values, before using the inner object property values (this is because Vues' `watch()` function does not run synchronously) while MobX runs synchronously, so changing the Presenter values immediatedly reflects into the Vue (which is really good).
+- *Caveat: All functions in vm are converted to async functions because they have to await for Vue values to update the Presenter before using the inner object property values (this is because Vues' `watch()` function does not run synchronously) while MobX runs synchronously, so changing the Presenter values immediatedly reflects into the Vue (which is really good to push changes from the Repository to the Presenter down to the Vue's ViewModel).
 
 ## Handling Maps
 ```js
