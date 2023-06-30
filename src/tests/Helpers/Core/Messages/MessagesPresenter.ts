@@ -3,10 +3,16 @@ import { action, computed, makeObservable, observable } from 'mobx'
 import { MessagesRepository } from './MessagesRepository'
 import { useMobX } from "@/useMobX";
 
+export abstract class GrandParent {
+  grandParentProp = 1
+}
+
 @injectable()
-export abstract class MessagesPresenter {
+export abstract class MessagesPresenter extends GrandParent {
 
   @inject(MessagesRepository) messagesRepository: MessagesRepository
+
+  nonObservedProp = 'test'
 
   showValidationWarning = null
 
@@ -18,6 +24,7 @@ export abstract class MessagesPresenter {
   }
 
   constructor () {
+    super()
     makeObservable(this, this.messagesObservables)
   }
 

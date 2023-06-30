@@ -10,6 +10,18 @@ import { isReactive, watch } from "vue";
 @injectable()
 export class LoginRegisterPresenter extends MessagesPresenter {
 
+  testNonObservable = 1
+
+  testNonObservableObject = {
+    prop: {
+      prop: {
+        prop: 1
+      }
+    }
+  }
+
+  object
+
   @inject(AuthenticationRepository) authenticationRepository: AuthenticationRepository
 
   @inject(MessagesRepository) messagesRepository: MessagesRepository
@@ -204,7 +216,7 @@ export class LoginRegisterPresenter extends MessagesPresenter {
   }
 
   reset () {
-    this.email = ''
+    this.email = 'test@test.ca'
     // this.password = ''
     this.option = 'login'
   }

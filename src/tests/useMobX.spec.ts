@@ -13,14 +13,62 @@ function wait () {
   return setTimeout(() => {})
 }
 
-describe('------------------- MobX Reactivity ------------------', () => {
+beforeEach(() => {
+  appTestHarness = new AppTestHarness()
+  appTestHarness.init()
+  presenter = appTestHarness.container.get(LoginRegisterPresenter)
+  vm = presenter.vm
+})
 
-  beforeEach(() => {
-    appTestHarness = new AppTestHarness()
-    appTestHarness.init()
-    presenter = appTestHarness.container.get(LoginRegisterPresenter)
-    vm = presenter.vm
+describe('------------------- Object Shadowing ------------------', () => {
+
+  it('parent non-observed properties are accessible', () => {
+    expect(vm.nonObservedProp).toBe('test')
   })
+
+  it('parent observed properties are accessible', () => {
+    expect(vm.showValidationWarning).toBe(false)
+  })
+
+  it('presenter observed properties accessible', () => {
+    expect(vm.email).toBe('test@test.ca')
+  })
+
+  it('grandparent properties are accessible', () => {
+    expect(vm.grandParentProp).toBe(1)
+  })
+
+  it('presenter non-observed properties accessible', () => {
+    expect(vm.testNonObservable).toBe(1)
+  })
+
+  it('presenter non-observed simple properties reassignable', () => {
+    vm.testNonObservable = 2
+    expect(presenter.testNonObservable).toBe(2)
+  })
+
+  it('presenter non-observed object properties reassignable', () => {
+    vm.testNonObservableObject = { test : 1 }
+    expect(presenter.testNonObservableObject.test).toBe(1)
+  })
+
+  it('vm non-observed object properties are reassignable', () => {
+    presenter.testNonObservableObject = { test : 1}
+    expect(vm.testNonObservableObject.test).toBe(1)
+  })
+
+  it('presenter non-observed object sub-properties are reassignable', () => {
+    vm.testNonObservableObject.prop.prop.prop = 3
+    expect(presenter.testNonObservableObject.prop.prop.prop).toBe(3)
+  })
+
+  it('presenter non-observed object sub-properties are reassignable', () => {
+    vm.testNonObservableObject.prop.prop.prop = 3
+    expect(presenter.testNonObservableObject.prop.prop.prop).toBe(3)
+  })
+})
+
+describe('------------------- MobX Reactivity ------------------', () => {
 
   describe('mobX observable state propagation to vue', () => {
 
@@ -246,8 +294,6 @@ describe('------------------- MobX Reactivity ------------------', () => {
     })
 
   })
-
-
 
   describe('mobx object/array reassignment & maintain reactivity', async () => {
 

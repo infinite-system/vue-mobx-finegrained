@@ -281,15 +281,22 @@ export function useMobX<Store extends Record<string, any>> (obj, observables, op
   // Create shadow of all the props that are not observables
   allProps.forEach(prop => {
     if (typeof observables[prop] === 'undefined' && prop !== opts.attach && prop !== shadowAttach) {
-      state[prop] = typeof obj[prop] === 'object'
-        ? markRaw(obj[prop])
-        : (typeof obj[prop] === 'function'
-            ? async function (...args) {
-              await setTimeout(() => {});
-              return obj[prop].bind(obj)(...args)
-            }
-            : obj[prop]
-        )
+      if (typeof obj[prop] === 'function') {
+        state[prop] = async function (...args) {
+          await setTimeout(() => {});
+          return obj[prop].bind(obj)(...args)
+        }
+      }
+      else {
+        Object.defineProperty(state, prop, {
+          get: function () {
+            return obj[prop]
+          },
+          set: function (value) {
+            obj[prop] = value;
+          }
+        })
+      }
     }
   })
 
