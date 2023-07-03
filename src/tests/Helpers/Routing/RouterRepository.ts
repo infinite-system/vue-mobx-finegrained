@@ -18,7 +18,7 @@ export class RouterRepository {
         routeDef: {
           path: '/',
           isSecure: true,
-          component: () => import('@/Home/HomeComponent.vue'),
+          component: () => import('@/tests/Helpers/Home/HomeComponent.vue'),
         }
       },
       {
@@ -26,7 +26,7 @@ export class RouterRepository {
         routeDef: {
           path: '/app/login',
           isSecure: false,
-          component: () => import('@/Authentication/LoginRegisterComponent.vue'),
+          component: () => import('@/tests/Helpers/Authentication/LoginRegisterComponent.vue'),
         }
       },
       {
@@ -34,7 +34,7 @@ export class RouterRepository {
         routeDef: {
           path: '/app/home',
           isSecure: true,
-          component: () => import('@/Home/HomeComponent.vue'),
+          component: () => import('@/tests/Helpers/Home/HomeComponent.vue'),
         }
       },
       {
@@ -42,7 +42,7 @@ export class RouterRepository {
         routeDef: {
           path: '/app/author-policy',
           isSecure: false,
-          component: () => import('@/Home/HomeComponent.vue'),
+          component: () => import('@/tests/Helpers/Home/HomeComponent.vue'),
         }
       },
       {
@@ -50,7 +50,7 @@ export class RouterRepository {
         routeDef: {
           path: '/:catchAll(.*)*',
           isSecure: true,
-          component: () => import('@/Routing/NotFoundRoute.vue')
+          component: () => import('@/tests/Helpers/Routing/NotFoundRoute.vue')
         }
       },
   ]

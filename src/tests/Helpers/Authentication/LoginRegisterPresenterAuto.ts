@@ -1,5 +1,5 @@
 import { inject, injectable } from 'inversify'
-import { action, makeObservable, observable, computed, comparer } from 'mobx'
+import { action, makeObservable, observable, computed, comparer, makeAutoObservable } from 'mobx'
 import { AuthenticationRepository } from './AuthenticationRepository'
 import { MessagesPresenter } from '../Core/Messages/MessagesPresenter'
 import { MessagesRepository } from '../Core/Messages/MessagesRepository'
@@ -9,13 +9,10 @@ import { isReactive, watch } from "vue";
 
 @injectable()
 class Test {
-  hello = 1
+  test = 1
 }
-
 @injectable()
-export class LoginRegisterPresenter extends MessagesPresenter {
-
-  @inject(Test) test
+export class LoginRegisterPresenterAuto  {
 
   testNonObservable = 1
 
@@ -29,6 +26,7 @@ export class LoginRegisterPresenter extends MessagesPresenter {
 
   object
 
+  @inject(Test) test: Test
 
   @inject(AuthenticationRepository) authenticationRepository: AuthenticationRepository
 
@@ -58,59 +56,6 @@ export class LoginRegisterPresenter extends MessagesPresenter {
   option = null
 
 
-  observables = {
-    test: observable,
-    _string: observable,
-    _number: observable,
-    _boolean: observable,
-    _array: observable,
-    _arraySplice: observable,
-    _arrayUnshift: observable,
-    _arrayPop: observable,
-    _arrayShift: observable,
-
-    _object: observable,
-    _objectUpdate: observable,
-    _objectDelete: observable,
-    _nobject: observable,
-    _nobjectUpdate: observable,
-    _nobjectDelete: observable,
-
-    _arrayReassign: observable,
-    _objectReassign: observable,
-
-    _getterObject: observable,
-    getterObject: computed,
-
-    _getterArray: observable,
-    getterArray: computed,
-
-    _getterNestedArray: observable,
-    getterNestedArray: computed,
-
-    _getterNestedObject: observable,
-    getterNestedObject: computed,
-
-    mapObject: observable,
-    setObject: observable,
-    mapObjectVisual: observable,
-    setObjectVisual: observable,
-
-    email: observable,
-    password: observable,
-    password2: observable,
-    option: observable,
-    reset: action,
-    login: action,
-    register: action,
-    // addObjectProperty: action,
-    logOut: action,
-    // setAuthRepoTest: action,
-    awesome: computed,
-    viewTest: computed,
-    viewTest2: computed,
-    _awesome: observable
-  }
   _string = 'string'
   _number = 1
   _boolean = true
@@ -151,9 +96,6 @@ export class LoginRegisterPresenter extends MessagesPresenter {
   mapObject = new Map()
   setObject = new Set()
 
-  mapObjectVisual = new Map([[2,200]])
-  setObjectVisual = new Set([1])
-
   get getterArray () {
     return this._getterArray.map(el => {
       return { prop: el.prop, prop2: el.prop2 }
@@ -189,17 +131,32 @@ export class LoginRegisterPresenter extends MessagesPresenter {
   get vm () {
 
     const observables = {
-      ...this.observables,
-      ...this.messagesObservables
+      // ...this.observables,
+      // ...this.messagesObservables
     }
 
-    return useMobX(this, observables)
+    return useMobX(this, 'auto', { auto: this.customObservable })
+  }
+
+  customObservable = {
+    testNonObservableObject: false,
+    testNonObservable: false,
+    customObservable: false,
+    getterObject: computed,
+    messagesRepository: false,
+    router: false,
+    authenticationRepository: false,
+    vm: false
   }
 
   constructor () {
-    super()
-    makeObservable(this, this.observables)
-    this.init()
+    // super()
+
+    const observables = {
+      // ...this.observables
+    }
+    makeAutoObservable(this, this.customObservable)
+    this.reset()
   }
 
   get viewTest () {

@@ -33,6 +33,9 @@ export default defineConfig({
       },
     },
   },
+  server: {
+    port: 5010
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))

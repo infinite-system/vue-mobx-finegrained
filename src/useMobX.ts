@@ -1,24 +1,12 @@
-import { markRaw, reactive, watch, UnwrapNestedRefs, toRaw, nextTick } from "vue";
+import { markRaw, reactive, watch, UnwrapNestedRefs, toRaw } from "vue";
 import { tryOnScopeDispose } from '@vueuse/core'
 
-import { observable, reaction, makeObservable, toJS, autorun, ObservableMap, ObservableSet } from 'mobx'
-import type { AnnotationsMap } from 'mobx'
+import { reaction, ObservableMap, ObservableSet, action, observable, computed } from 'mobx'
 import { deepObserve } from "mobx-utils";
-import get from 'lodash/get'
-import set from 'lodash/set'
 
-/**
- * Create a shallow object clone very quickly.
- *
- * @param obj
- */
-export function shallowClone (obj) {
-  if (obj === null || typeof obj !== 'object' || '__isActiveClone__' in obj) {
-    return obj;
-  }
-  let cloned = obj instanceof Date ? new Date(obj) : obj.constructor();
-  return Array.isArray(obj) ? obj.slice(0) : Object.assign(cloned, obj)
-}
+import get from 'lodash/get'
+import cloneDeep from 'lodash/cloneDeep'
+import clone from 'lodash/clone'
 
 /**
  * Notify MobX reactivity system of changes to propagate Vue reactive changes, by reassigning values.
@@ -28,43 +16,7 @@ export function shallowClone (obj) {
  * @param key
  */
 export function notify (obj) {
-  return shallowClone(obj)
-}
-
-/**
- * Very quick full clone function.
- *
- * @param obj
- */
-export function fullClone (obj) {
-
-  if (obj === null || typeof obj !== 'object' || '__isActiveClone__' in obj) {
-    return obj;
-  }
-
-  let cloned = obj instanceof Date ? new Date(obj) : new obj.constructor();
-
-  if (Array.isArray(obj)) {
-    const objLength = obj.length;
-    for (let key = 0; key < objLength; key++) {
-      cloned[key] = fullClone(obj[key]);
-    }
-  }
-  else {
-    for (let key in obj) {
-      if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        obj['__isActiveClone__'] = null;
-        // if (cloned === undefined){
-        //   console.log('underfined..', new obj.constructor())
-        // }
-        cloned[key] = fullClone(obj[key]);
-        delete obj['__isActiveClone__'];
-
-      }
-    }
-  }
-
-  return cloned;
+  return clone(obj)
 }
 
 /**
@@ -76,11 +28,15 @@ export function fullClone (obj) {
  */
 function getMagicProps (instance) {
 
-  const props = Object.entries(
-    Object.getOwnPropertyDescriptors(
-      Reflect.getPrototypeOf(instance)
-    )
-  )
+  let proto = Object.getPrototypeOf(instance)
+
+  let props = []
+  while (proto && proto.constructor.name !== 'Object') {
+    props.push.apply(props, Object.entries(
+      Object.getOwnPropertyDescriptors(proto)
+    ))
+    proto = Object.getPrototypeOf(proto.constructor.prototype)
+  }
 
   const magicProps = { get: {}, set: {}, all: {} }
 
@@ -144,6 +100,18 @@ export function reactiveObservable<TStore extends Record<string | number, any>> 
   return reactive(obj)
 }
 
+function isObservableMap (obj) {
+  return obj instanceof ObservableMap
+}
+
+function isObservableSet (obj) {
+  return obj instanceof ObservableSet
+}
+
+function isObservableMapOrSet (obj) {
+  return isObservableMap(obj) || isObservableSet(obj)
+}
+
 /**
  * Create shadow prop name.
  *
@@ -174,16 +142,16 @@ export function useMobX<Store extends Record<string, any>> (obj, observables, op
       if (typeof state[observable] === 'object') {
         if (Array.isArray(newValue)) {
           // Handle array
-          state[observable] = newValue.map(el => typeof el === 'object' ? markRaw(fullClone(el)) : fullClone(el))
+          state[observable] = newValue.map(el => typeof el === 'object' ? markRaw(cloneDeep(el)) : cloneDeep(el))
         }
         else {
           // Handle object
           state[observable] =
-            newValue instanceof ObservableMap || newValue instanceof ObservableSet
-              // If it's an MobX's ObservbaleMap, copy reference only!
-              // Otherwise the reactivity gets lost
+            // If it's an MobX's ObservbaleMap or ObservableSet, copy reference only!
+            // Otherwise the reactivity gets lost
+            isObservableMapOrSet(newValue)
               ? markRaw(newValue)
-              : markRaw(fullClone(newValue))
+              : markRaw(cloneDeep(newValue))
         }
       }
       else {
@@ -192,24 +160,32 @@ export function useMobX<Store extends Record<string, any>> (obj, observables, op
       }
     }
     else {
-      state[observable] = newValue instanceof ObservableMap || newValue instanceof ObservableSet
-        // If it's an MobX's ObservbaleMap, copy reference only!
+      state[observable] = isObservableMapOrSet(newValue)
+        // If it's an MobX's ObservbaleMap or ObservableSet, copy reference only!
         // Otherwise the reactivity Observable values get lost
         ? newValue
         // Full clone the property without marking it raw
-        : fullClone(newValue)
+        : cloneDeep(newValue)
     }
   }
 
   function deepUpdateVue (state, observable, change, path) {
-    path = path.replaceAll('/', '.')
 
-    const ref = (path === '' ? state[observable] : get(state[observable], path))
+    path = path.replaceAll('/', '.')
+    const ref = path === '' ? state[observable] : get(state[observable], path)
 
     switch (change.type) {
       case 'add':
       case 'update':
-        ref[change.name] = change.newValue
+        if (change.observableKind === 'map') {
+          ref.set(change.name, change.newValue)
+        }
+        else if (change.observableKind === 'set') {
+          ref.add(change.newValue)
+        }
+        else {
+          ref[change.name] = change.newValue
+        }
         break;
       case 'remove':
         delete ref[change.name]
@@ -230,10 +206,9 @@ export function useMobX<Store extends Record<string, any>> (obj, observables, op
 
   // Init options
   const opts = {
-    ...{
-      raw: false, // true for all observables or [] of items that must be markRaw()
-      attach: 'vm', // property name to attach to obj
-    },
+    raw: false, // true for all observables or [] of items that must be markRaw()
+    attach: 'vm', // property name to attach to obj
+    auto: false,
     ...options
   }
 
@@ -247,6 +222,28 @@ export function useMobX<Store extends Record<string, any>> (obj, observables, op
   // Get all the magic setters and getters from the object
   const magicProps = getMagicProps(obj)
 
+  // Get all the props from the source object & its prototype
+  let proto = Object.getPrototypeOf(obj)
+  let allProps = Object.getOwnPropertyNames(obj)
+  while (proto && proto.constructor.name !== 'Object') {
+    allProps.push.apply(allProps, Object.getOwnPropertyNames(proto)
+      .filter(el => !['caller', 'callee', 'arguments'].includes(el)))
+    proto = Object.getPrototypeOf(proto.constructor.prototype)
+  }
+
+  if (observables === 'auto') {
+    observables = {}
+    for (let i = 0; i < allProps.length; i++) {
+      const prop = allProps[i]
+      if ((prop in opts.auto && opts.auto[prop] === false)
+        || (prop === opts.attach && prop === shadowAttach)
+      ) {
+        continue;
+      }
+      observables[prop] = true
+    }
+  }
+
   // Collect all observable definitions
   const observers = {}
   for (const observable in observables) {
@@ -255,9 +252,13 @@ export function useMobX<Store extends Record<string, any>> (obj, observables, op
         await setTimeout(() => {});
         return obj[observable].bind(obj)(...args)
       }
-      : (obj[observable] instanceof ObservableMap || obj[observable] instanceof ObservableSet
-        ? obj[observable]
-        : fullClone(obj[observable]))
+      : (isObservableMapOrSet(obj[observable])
+        ? (
+          isObservableMap(obj[observable])
+            ? new Map(cloneDeep(obj[observable]))
+            : new Set(cloneDeep(obj[observable]))
+        )
+        : cloneDeep(obj[observable]))
   }
 
   // Setup the base combined MobX observable and Vue reactive state
@@ -274,29 +275,27 @@ export function useMobX<Store extends Record<string, any>> (obj, observables, op
     return typeof magicProps.get[observable] !== 'undefined' || typeof obj[observable] !== 'function'
   }
 
-  // Get all the props from the source object
-  const allProps = Object.getOwnPropertyNames(obj)
-    .concat(Object.getOwnPropertyNames(Object.getPrototypeOf(obj)));
 
   // Create shadow of all the props that are not observables
   allProps.forEach(prop => {
     if (typeof observables[prop] === 'undefined' && prop !== opts.attach && prop !== shadowAttach) {
-      if (typeof obj[prop] === 'function') {
-        state[prop] = async function (...args) {
-          await setTimeout(() => {});
-          return obj[prop].bind(obj)(...args)
-        }
-      }
-      else {
-        Object.defineProperty(state, prop, {
-          get: function () {
+
+      let getSet = {
+        get: typeof obj[prop] === 'function'
+          ? function () {
+            return async function (...args) {
+              await setTimeout(() => {});
+              return obj[prop].bind(obj)(...args)
+            }
+          } : function () {
             return obj[prop]
           },
-          set: function (value) {
-            obj[prop] = value;
-          }
-        })
+        set: function (value) {
+          obj[prop] = value;
+        },
+        enumerable: true
       }
+      Object.defineProperty(state, prop, getSet)
     }
   })
 

@@ -21,6 +21,8 @@ export abstract class MessagesPresenter extends GrandParent {
     messages: computed,
     clientMessages: computed,
     unpackRepositoryPmToVm: action,
+    parentGetter: computed,
+    _parentGetter: observable
   }
 
   constructor () {
@@ -37,6 +39,11 @@ export abstract class MessagesPresenter extends GrandParent {
 
   get messages () {
     return this.messagesRepository.appMessages
+  }
+
+  _parentGetter = 'yay'
+  get parentGetter() {
+    return this._parentGetter
   }
 
   get clientMessages () {

@@ -4115,10 +4115,10 @@ vitest@^0.31.0:
     vite-node "0.31.1"
     why-is-node-running "^2.2.2"
 
-vue-dd@^1.5.0:
-  version "1.6.2"
-  resolved "https://registry.yarnpkg.com/vue-dd/-/vue-dd-1.6.2.tgz#4f9eb5b25e8f82e425bc69f2a85968d546bc6c23"
-  integrity sha512-dmDSQTWpTHLPxJNR/ptYVnjuwEhBWIezctVmYR4UrCzWgzAh83O9vr7QS9nR3awoI508bbpbHDu8xPo4s8tTqA==
+vue-dd@^1.6.4:
+  version "1.6.4"
+  resolved "https://registry.yarnpkg.com/vue-dd/-/vue-dd-1.6.4.tgz#8e84f4ebde5ebecc7994e044a633e66bf310bb7f"
+  integrity sha512-1PcnQLo0jvxK34GKzKj84FixN6CIePLx0g3CvBTRBe1yXzLBJFvAbJBkJSgOvE6QWg1gDqZlC/pRK9rsLoyY3g==
 
 vue-demi@>=0.14.5:
   version "0.14.5"
