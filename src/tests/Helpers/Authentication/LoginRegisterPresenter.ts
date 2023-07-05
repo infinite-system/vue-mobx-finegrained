@@ -1,11 +1,12 @@
 import { inject, injectable } from 'inversify'
-import { action, makeObservable, observable, computed, comparer } from 'mobx'
+import { action, makeObservable, observable, computed, comparer, runInAction } from 'mobx'
 import { AuthenticationRepository } from './AuthenticationRepository'
 import { MessagesPresenter } from '../Core/Messages/MessagesPresenter'
 import { MessagesRepository } from '../Core/Messages/MessagesRepository'
 import { Router } from '../Routing/Router'
 import { useMobX, notify } from '@/useMobX';
 import { isReactive, watch } from "vue";
+import cloneDeep from "lodash/cloneDeep";
 
 @injectable()
 class Test {
@@ -57,6 +58,12 @@ export class LoginRegisterPresenter extends MessagesPresenter {
 
   option = null
 
+  shallowObj = {
+    prop: 1,
+    prop2: {
+      prop3: 3
+    }
+  }
 
   observables = {
     test: observable,
@@ -91,6 +98,8 @@ export class LoginRegisterPresenter extends MessagesPresenter {
     _getterNestedObject: observable,
     getterNestedObject: computed,
 
+    shallowObj: observable.shallow,
+
     mapObject: observable,
     setObject: observable,
     mapObjectVisual: observable,
@@ -109,7 +118,10 @@ export class LoginRegisterPresenter extends MessagesPresenter {
     awesome: computed,
     viewTest: computed,
     viewTest2: computed,
-    _awesome: observable
+    _awesome: observable,
+
+    hugeArray: observable.shallow,
+    derivedState: computed
   }
   _string = 'string'
   _number = 1
@@ -148,6 +160,8 @@ export class LoginRegisterPresenter extends MessagesPresenter {
     prop3: { prop: 1, prop2: 2 }
   }
 
+  hugeArray = []
+
   mapObject = new Map()
   setObject = new Set()
 
@@ -164,7 +178,6 @@ export class LoginRegisterPresenter extends MessagesPresenter {
     this._getterArray = value
   }
 
-
   get getterNestedArray () {
     return this._getterNestedArray.map(el => {
       return { prop: el.prop, prop2: el.prop2, prop3: el.prop3 }
@@ -175,16 +188,24 @@ export class LoginRegisterPresenter extends MessagesPresenter {
     this._getterNestedArray = value
   }
 
-
   get getterObject () {
     return this._getterObject
   }
-
 
   get getterNestedObject () {
     return this._getterNestedObject
   }
 
+  get derivedState() {
+    console.log('calc')
+    console.trace()
+    return this.hugeArray.map(el => ({ testing: 1, struct: cloneDeep(el.struct) }))
+  }
+
+//   set derivedState(value) {
+//     this.hugeArray = value
+// console.log('setting derivedSstate', value)
+//   }
 
   get vm () {
 
@@ -196,8 +217,63 @@ export class LoginRegisterPresenter extends MessagesPresenter {
     return useMobX(this, observables)
   }
 
+  alertState() {
+    alert(this.vm.hugeArray[100].struct.user)
+  }
+
   constructor () {
     super()
+
+    for(let i =0; i< 1020;i++){
+      this.hugeArray.push({
+        prop: 'test',
+        struct: {
+          id: i,
+          user: 'vasya',
+          text: 'hello',
+          struct: {
+            id: i,
+            user: 'vasya',
+            text: 'hello',
+
+            struct: {
+              id: i,
+              user: 'vasya',
+              text: 'hello',
+
+              struct: {
+                id: i,
+                user: 'vasya',
+                text: 'hello'
+              }
+            }
+          },
+          struct: {
+            id: i,
+            user: 'vasya',
+            text: 'hello',
+            struct: {
+              id: i,
+              user: 'vasya',
+              text: 'hello',
+
+              struct: {
+                id: i,
+                user: 'vasya',
+                text: 'hello',
+
+                struct: {
+                  id: i,
+                  user: 'vasya',
+                  text: 'hello'
+                }
+              }
+            }
+          }
+        }
+      })
+    }
+
     makeObservable(this, this.observables)
     this.init()
   }
@@ -212,10 +288,6 @@ export class LoginRegisterPresenter extends MessagesPresenter {
     return this.authenticationRepository.testVariable2
   }
 
-  set viewTest (value) {
-    this.authenticationRepository.testVariable = value
-  }
-
   setAuthRepoTest () {
     this.authenticationRepository.testVariable.push(
       { test1: 'test1!', test2: 'test1!', sub: { test: 'yes' } }
@@ -227,8 +299,8 @@ export class LoginRegisterPresenter extends MessagesPresenter {
 
   //
   set viewTest (value) {
-    console.log('this!', this)
-    this.authenticationRepository.testVariable = value
+    // console.log('this!', this)
+    // this.authenticationRepository.testVariable = value
   }
 
   setAuthRepoTest () {

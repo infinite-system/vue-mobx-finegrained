@@ -519,18 +519,18 @@ function test (presenterClass, mode = 'manual') {
           })
 
           it('vue reassign Map', async () => {
-            vm.mapObject = new ObservableMap([[
-              'prop', 1
+            vm.mapObject = new Map([[
+              'prop', 5
             ]])
             await wait()
-            expect(presenter.mapObject.get('prop')).toBe(1)
+            expect(presenter.mapObject.get('prop')).toBe(5)
 
             presenter.mapObject.set('prop', 2)
             expect(vm.mapObject.get('prop')).toBe(2)
           })
 
           it('vue reassign Set', async () => {
-            vm.setObject = new ObservableSet([1, 2])
+            vm.setObject = new Set([1, 2])
             await wait()
             presenter.setObject.add(3)
             let i = 0
