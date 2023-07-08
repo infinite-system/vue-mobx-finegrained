@@ -128,17 +128,9 @@ export class LoginRegisterPresenterAuto  {
   }
 
 
-  get vm () {
 
-    const observables = {
-      // ...this.observables,
-      // ...this.messagesObservables
-    }
-
-    return useMobX(this, 'auto', { auto: this.customObservable })
-  }
-
-  customObservable = {
+  observable = {
+    observable: false,
     testNonObservableObject: false,
     testNonObservable: false,
     customObservable: false,
@@ -146,7 +138,7 @@ export class LoginRegisterPresenterAuto  {
     messagesRepository: false,
     router: false,
     authenticationRepository: false,
-    vm: false
+    vm: false,
   }
 
   constructor () {
@@ -155,9 +147,14 @@ export class LoginRegisterPresenterAuto  {
     const observables = {
       // ...this.observables
     }
-    makeAutoObservable(this, this.customObservable)
+    makeAutoObservable(this, this.observable)
     this.reset()
   }
+
+  get vm () {
+    return useMobX(this, this.observable, { auto: true })
+  }
+
 
   get viewTest () {
     return this.authenticationRepository.testVariable.map(pm => {

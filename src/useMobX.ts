@@ -1,11 +1,106 @@
-import { reactive, watch, UnwrapNestedRefs, toRaw, shallowRef, shallowReactive, markRaw, ref } from "vue";
+import { reactive, UnwrapNestedRefs, markRaw } from "vue";
 import { tryOnScopeDispose } from '@vueuse/core'
-import { reaction, ObservableMap, ObservableSet, observable, observe } from 'mobx'
+import { reaction, ObservableMap, ObservableSet, observable, observe, computed } from 'mobx'
 import { deepObserve } from "mobx-utils";
 
-import get from 'lodash/get'
-import cloneDeep from 'lodash/cloneDeep'
-import clone from 'lodash/clone'
+function getByPath (object, parts) {
+
+  let currentObject = object
+  const last = parts.pop()
+
+  for (const part of parts) {
+    currentObject = currentObject[part]
+    if (!currentObject) return
+  }
+
+  return currentObject[last]
+}
+
+function setByPath (object, parts, value) {
+
+  let currentObject = object
+  const last = parts.pop()
+
+  for (const part of parts) {
+    currentObject = currentObject[part]
+    if (!currentObject) return
+  }
+
+  currentObject[last] = value
+}
+
+const deleteByPath = (object, parts) => {
+
+  let currentObject = object
+  const last = parts.pop()
+
+  for (const part of parts) {
+    currentObject = currentObject[part]
+    if (!currentObject) return
+  }
+
+  delete currentObject[last]
+}
+
+function clone (obj) {
+
+  if (typeof obj !== 'object' || obj === null) {
+    return obj;
+  }
+
+  if (obj instanceof Date) {
+    return new Date(obj.getTime());
+  }
+
+  if (obj instanceof Array) {
+    const newArray = []
+    for (let i = 0; i < obj.length; i++) {
+      newArray[i] = obj[i]
+    }
+    return newArray;
+  }
+
+  if (obj instanceof Object) {
+    const newObj = {}
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        newObj[key] = obj[key];
+      }
+    }
+    return newObj;
+  }
+}
+
+function deepClone (obj) {
+
+  if (typeof obj !== 'object' || obj === null || '__isActiveClone__' in obj) {
+    return obj
+  }
+
+  if (obj instanceof Date) {
+    return new Date(obj.getTime());
+  }
+
+  if (obj instanceof Array) {
+    const newArray = []
+    for (let i = 0; i < obj.length; i++) {
+      newArray[i] = deepClone(obj[i])
+    }
+    return newArray;
+  }
+
+  if (obj instanceof Object) {
+    const newObj = {}
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        obj['__isActiveClone__'] = null
+        newObj[key] = deepClone(obj[key])
+        delete obj['__isActiveClone__']
+      }
+    }
+    return newObj;
+  }
+}
 
 /**
  * Notify MobX reactivity system of changes to propagate Vue reactive changes, by reassigning values.
@@ -56,29 +151,6 @@ function getMagicProps (instance) {
 }
 
 /**
- * Setup MobX observable and Vue Reactive state on an object.
- *
- * @param baseState
- * @param observables
- */
-export function reactiveObservable<TStore extends Record<string | number, any>> (
-  baseState: TStore,
-  observables: TStore,
-): UnwrapNestedRefs<TStore> {
-
-  const obj = Object.assign({}, baseState)
-
-  // Handle MobX observable.shallow and observable.ref
-  // for (const prop in observables) {
-  //   if (isMobXShallow(observables[prop])) {
-  //     obj[prop] = shallowRef(shallowReactive(obj[prop]))
-  //   }
-  // }
-
-  return reactive(obj)
-}
-
-/**
  * Detect MobX observable Map.
  *
  * @param obj
@@ -106,15 +178,6 @@ function isObservableMapOrSet (obj) {
 }
 
 /**
- * Detect MobX observable Map or Set.
- *
- * @param obj
- */
-function isStandardMapOrSet (obj) {
-  return typeof obj === 'object' && (obj instanceof Map || obj instanceof Set)
-}
-
-/**
  * Create shadow prop name.
  *
  * @param prop
@@ -137,7 +200,7 @@ function reassignUpdateVue (state, observable, newValue) {
     // Otherwise the reactivity Observable values get lost
     ? newValue
     // Full clone the property without marking it raw
-    : cloneDeep(newValue)
+    : deepClone(newValue)
 }
 
 /**
@@ -150,9 +213,10 @@ function reassignUpdateVue (state, observable, newValue) {
  */
 function deepUpdateVue (state, observable, change, path = '') {
 
-  path = path === '' ? '' : path.replace('/', '.')
-  const ref = path === '' ? state[observable] : get(state[observable], path)
+  path = path === '' ? '' : path.replaceAll('/', '.').split('.')
+  const ref = path === '' ? state[observable] : getByPath(state[observable], path)
 
+  // console.log(path, 'deep update',  change, change.newValue)
   switch (change.type) {
     case 'add':
     case 'update':
@@ -230,16 +294,16 @@ function getAllProperties (obj) {
  * @param shadowAttach
  */
 function handleAutoObservables (observables, allProps, opts, shadowAttach) {
-  if (observables === 'auto') {
-    observables = {}
+  if (opts.auto) {
     for (let i = 0; i < allProps.length; i++) {
       const prop = allProps[i]
-      if ((prop in opts.auto && opts.auto[prop] === false)
-        || (prop === opts.attach && prop === shadowAttach)
+      if ((prop in observables && observables[prop] === false)
+        || (prop === opts.attach || prop === shadowAttach || prop === 'constructor')
       ) {
+        delete observables[prop]
         continue;
       }
-      observables[prop] = prop in opts.auto ? opts.auto[prop] : true
+      observables[prop] = prop in observables ? observables[prop] : true
     }
   }
   return observables
@@ -254,6 +318,7 @@ function handleAutoObservables (observables, allProps, opts, shadowAttach) {
  */
 export function useMobX<Store extends Record<string, any>> (obj, observables, options = {}): UnwrapNestedRefs<Store | any> {
 
+  const originalObservables = observables;
   // Init options
   const opts = {
     attach: 'vm', // property name to attach to obj
@@ -281,46 +346,38 @@ export function useMobX<Store extends Record<string, any>> (obj, observables, op
   const baseState = {}
   for (const prop in observables) {
     if (typeof magicProps.get[prop] !== 'undefined') {
-      // Skip computed (computed gets assigned to state in computed reaction initialization)
+      // Skip computed (computed gets assigned to vue in computed reaction initialization)
       // to prevent multiple initializations
       continue
     }
     baseState[prop] = typeof obj[prop] === 'function'
-      ? async function (...args) {
-        await setTimeout(() => {});
+      ? function (...args) {
         return obj[prop].bind(obj)(...args)
       }
       : (isObservableMapOrSet(obj[prop])
         ? (
           isObservableMap(obj[prop])
-            ? new Map(cloneDeep(obj[prop]))
-            : new Set(cloneDeep(obj[prop]))
+            ? obj[prop]
+            : obj[prop]
         )
-        : cloneDeep(obj[prop]))
+        : deepClone(obj[prop]))
   }
 
   // Setup the base combined MobX observable and Vue reactive state
-  const state = reactiveObservable(baseState, observables)
-
-
-  // Determine if property should be watched by Vue & MobX
-  function shouldWatch (obj, magicProps, prop) {
-    return typeof magicProps.get[prop] !== 'undefined' || typeof obj[prop] !== 'function'
-  }
-
+  const o = Object.assign({}, baseState)
+  const vue = reactive(o)
 
   // Create shadow of all the props that are not observables
-
   allProps.forEach(prop => {
     if (typeof observables[prop] === 'undefined' && prop !== opts.attach && prop !== shadowAttach) {
       let getSet = {
         get: typeof obj[prop] === 'function'
           ? function () {
-            return async function (...args) {
-              await setTimeout(() => {});
+            return function (...args) {
               return obj[prop].bind(obj)(...args)
             }
           } : function () {
+            // console.log('get '+ prop)
             return typeof obj[prop] === 'object' ? markRaw(obj[prop]) : obj[prop]
           },
         set: function (value) {
@@ -328,7 +385,7 @@ export function useMobX<Store extends Record<string, any>> (obj, observables, op
         },
         enumerable: true
       }
-      Object.defineProperty(state, prop, getSet)
+      Object.defineProperty(vue, prop, getSet)
     }
   })
 
@@ -338,43 +395,41 @@ export function useMobX<Store extends Record<string, any>> (obj, observables, op
   const mobxDisposer = {}
   const reassignObserveDisposer = {}
   const createReassignObserver = {}
-  // Vue watchers
-  const createVueWatcher = {}
-  // Vue watch disposers
-  const vueDisposer = {}
+
+  const shallowObjects = {}
+  const computedObjects = {}
+
+  // console.log('observables', observables)
+
+  // Determine if property should be watched by Vue & MobX
+  function shouldWatch (obj, prop, magicProps) {
+    return typeof magicProps.get[prop] !== 'undefined' || typeof obj[prop] !== 'function'
+  }
 
   // Iterate over all the defined observables
-  for (let prop in observables) {
+  for (const prop in observables) {
 
-    if (shouldWatch(obj, magicProps, prop)) {
+    if (!observables[prop]) continue
 
-      const isComputed = typeof magicProps.get[prop] !== 'undefined'
-      let i = 0;
-      // Create a Vue Watcher to set values on the original MobX observable object
-      // Watches the values change in the Vue shadow state and sets
-      // them back to the MobX observable
-      createVueWatcher[prop] = isComputed ? () => () => {} : () => {
+    if (shouldWatch(obj, prop, magicProps)) {
 
-        let timeout = {}
-        return watch(() => state[prop], function (newValue) {
-
-          console.log('watch', isComputed, prop)
-          // Dispose the MobX reaction before setting value
-          // to prevent infinite reactive recursion
-          mobxDisposer[prop]()
-          // Set the value of the original object property
-          // Set to raw object instead of reactive() object
-          // By calling toRaw() on the new value
-          obj[prop] = toRaw(newValue)
-
-          // Recreate MobX reaction and its disposer function after setting a new value
-          mobxDisposer[prop] = createMobXObserver[prop]()
-
-        }, { deep: !isMobXShallow(observables[prop]) })
+      if (observables[prop] === observable.shallow || observables[prop] === observable.ref) {
+        shallowObjects[prop] = true
       }
 
-      // Create Vue watcher and store the watch disposer
-      vueDisposer[prop] = createVueWatcher[prop]()
+      let isComputed = false
+      if (observables[prop] === computed || observables[prop] === computed.struct) {
+        computedObjects[prop] = true
+        isComputed = true
+      }
+      else if (opts.auto
+        && observables[prop] !== false
+        && typeof magicProps.get[prop] !== 'undefined'
+      ) {
+        computedObjects[prop] = true
+        isComputed = true
+      }
+
 
       // Create MobX reactions that will change the Vue shadow state reactive() props
       createMobXObserver[prop] = () => {
@@ -382,24 +437,12 @@ export function useMobX<Store extends Record<string, any>> (obj, observables, op
         if (isComputed) {
           // Handle computed getters
           // Computed getters should be updated shallowly
-          const computedHandler = newValue => {
-
-            console.log('computed', prop)
-            // Dispose the Vue watcher before setting a value.
-            // This is to prevent infinite recursion
-            vueDisposer[prop]()
-
-            // Update Vue reactive state by reassignment
-            reassignUpdateVue(state, prop, newValue)
-
-            // Create Vue watcher and its disposer
-            vueDisposer[prop] = createVueWatcher[prop]()
-          }
+          const computedHandler = newValue => reassignUpdateVue(vue, prop, newValue)
 
           const computedObserveDisposer = reaction(() => {
-            // Computed is intialized into the state only once
+            // Computed is intialized into the Vue state only once
             // right here when reaction is initialized
-            state[prop] = obj[prop]
+            vue[prop] = obj[prop]
           }, computedHandler)
 
           return () => {
@@ -414,22 +457,13 @@ export function useMobX<Store extends Record<string, any>> (obj, observables, op
           // the deep changes are handled by deepChangeHandler()
           // & shallow changes are handled by shallowChangeHandler()
           const reassignHandler = newValue => {
-            console.log('computed')
-            // Dispose the Vue watcher before setting a value.
-            // This is to prevent infinite recursion
-            vueDisposer[prop]()
-
-            // Dispose MobX observers as well, because
+            // Dispose MobX observers
             // They have to be recreated
             mobxDisposer[prop]()
-
-            // Set property of shadow state.
-            reassignUpdateVue(state, prop, newValue)
-
+            // Set property of shadow Vue state.
+            reassignUpdateVue(vue, prop, newValue)
             // Recreate MobX shallow and deep watchers
             mobxDisposer[prop] = createMobXObserver[prop]()
-            // Recreate Vue watcher and its disposer
-            vueDisposer[prop] = createVueWatcher[prop]()
           }
 
           // Create shallow MobX reaction observer
@@ -439,42 +473,20 @@ export function useMobX<Store extends Record<string, any>> (obj, observables, op
           // Handle deep object changes in MobX and mirror them into the Vue reactive state
           // based on those changes. More: https://github.com/mobxjs/mobx-utils#deepobserve
           // https://github.com/mobxjs/mobx/issues/214
-          const deepChangeHandler = (change, path, root) => {
-            // console.log('change', change, 'path', path, 'root', root)
-
-            console.log('deepChange')
-            // Dispose the Vue watcher before setting a value.
-            // This is to prevent infinite recursion
-            vueDisposer[prop]()
-
-            // Get updated values from MobX and change them in Vue object
-            deepUpdateVue(state, prop, change, path)
-
-            // Recreate Vue watcher and its disposer
-            vueDisposer[prop] = createVueWatcher[prop]()
-          }
+          const deepChangeHandler = (change, path, root) => deepUpdateVue(vue, prop, change, path)
 
           // Handle shallow object changes in MobX and mirror them into the Vue reactive state
           // based on those changes. More: https://github.com/mobxjs/mobx-utils#deepobserve
           // https://github.com/mobxjs/mobx/issues/214
-          const shallowChangeHandler = (change) => {
-            // console.log('change', change)
+          const shallowChangeHandler = (change) => shallowUpdateVue(vue, prop, change)
 
-            // Dispose the Vue watcher before setting a value.
-            // This is to prevent infinite recursion
-            vueDisposer[prop]()
-
-            console.log('shallowChange')
-            // Get updated values from MobX and change them in Vue object
-            shallowUpdateVue(state, prop, change)
-
-            // Recreate Vue watcher and its disposer
-            vueDisposer[prop] = createVueWatcher[prop]()
+          let observeDisposer;
+          if (isMobXShallow(observables[prop])) {
+            observeDisposer = observe(obj[prop], shallowChangeHandler)
           }
-
-          const observeDisposer = isMobXShallow(observables[prop])
-            ? observe(obj[prop], shallowChangeHandler)
-            : deepObserve(obj[prop], deepChangeHandler)
+          else {
+            observeDisposer = deepObserve(obj[prop], deepChangeHandler)
+          }
 
           return () => {
             // MobX shallow and deep disposers
@@ -493,14 +505,162 @@ export function useMobX<Store extends Record<string, any>> (obj, observables, op
   // scope destruction to prevent memory leaks
   tryOnScopeDispose(() => {
     for (let prop in mobxDisposer) mobxDisposer[prop]()
-    for (let prop in vueDisposer) vueDisposer[prop]()
   })
 
   // Attach to the source object
   // if it is not attached already
   if (opts.attach && !(shadowAttach in obj)) {
-    obj[shadowAttach] = state
+    obj[shadowAttach] = vue
   }
 
-  return state
+  const shallowObjectHandler = (prop: string, path: string[] = []) => ({
+
+    get: (target, key): any => {
+
+      if (typeof target === 'object') {
+
+        let value
+
+        if (target instanceof Map
+          || target instanceof Set
+          || target instanceof ObservableMap
+          || target instanceof ObservableSet) {
+          value = target[key]
+          // console.log(`Getting Map/Set/ObservableMap/ObservableSet at root key [${key}]:`, value, 'constructor.name:', target.constructor.name)
+        }
+        else {
+          // console.log(`Getting deep function at:`, path.slice(0).concat(key))
+          value = path.length === 0 ? target[key] : getByPath(obj[prop], path.slice(0).concat(key))
+        }
+
+        if (typeof value === "function") return value.bind(target)
+      }
+
+      if (typeof target[key] === 'object' && target[key] !== null) {
+        // console.log('Create new Proxy at path:', fullPath)
+        return new Proxy(
+          target[key],
+          shallowObjectHandler(prop, path.slice(0).concat(key))
+        )
+      }
+
+      return target[key];
+    },
+    set: (target, key, value) => {
+      if (!path.length) {
+        // console.log('Setting root value at key:', key, 'value:', value)
+        obj[prop][key] = value
+      }
+      else {
+        console.log('Setting deep object value at path:', path.slice(0).concat(key), 'newValue:', value, 'oldValue:', getByPath(obj[prop], path.slice(0).concat(key)))
+        setByPath(vue[prop], path.slice(0).concat(key), value)
+        setByPath(obj[prop], path.slice(0).concat(key), value)
+      }
+      return true;
+    },
+    deleteProperty (target, key) {
+      if (path.length === 0) {
+        // console.log('Deleting root value at key:', key);
+        delete vue[prop][key]
+      }
+      else {
+        deleteByPath(vue[prop], path.slice(0).concat(key))
+      }
+      return true;
+    },
+  });
+
+  for (const prop in shallowObjects) {
+    obj['_' + prop] = new Proxy(obj[prop], shallowObjectHandler(prop))
+  }
+
+  const createHandler = (path: string[] = []) => ({
+
+    get: (target, key): any => {
+
+
+      if (typeof target === 'object') {
+
+        let value
+        if (target instanceof Map
+          || target instanceof Set
+          || target instanceof ObservableMap
+          || target instanceof ObservableSet) {
+          value = target[key]
+          // console.log(`Getting Map/Set/ObservableMap/ObservableSet at root key [${key}]:`, value, 'constructor.name:', target.constructor.name)
+        }
+        else {
+          // console.log(`Getting deep function at:`, path.slice(0).concat(key))
+          value = path.length === 0
+            ? target[key]
+            : getByPath(target, path.slice(0).concat(key))
+        }
+
+        if (typeof value === "function") return value.bind(target)
+      }
+
+      if (typeof target[key] === 'object' && target[key] !== null) {
+        return new Proxy(
+          target[key],
+          createHandler(path.slice(0).concat(key))
+        )
+      }
+      return target[key];
+    },
+    set: (target, key, value) => {
+      // console.log(`Setting ${path.join('.') + '.' + key} to: `, value, path);
+      if (!path.length) {
+        // console.log('Setting at root...', key, 'value:', value)
+        if (key in computedObjects) {
+          vue[key] = value
+        }
+        else {
+          obj[key] = value
+        }
+      }
+      else {
+
+        if (path[0] in computedObjects) {
+          setByPath(vue, path.slice(0).concat(key), value)
+        }
+        else if (path[0] in shallowObjects) {
+          setByPath(obj, path.slice(0).concat(key), value)
+          setByPath(vue, path.slice(0).concat(key), value)
+        }
+        else {
+          setByPath(obj, path.slice(0).concat(key), value)
+        }
+      }
+      return true;
+    },
+    deleteProperty (target, key) {
+      if (path.length === 0) {
+        // console.log(`Deleting root prop ${path.join('.') + '.' + key}`);
+        if (key in computedObjects) {
+          delete vue[key]
+        }
+        else {
+          delete obj[key]
+        }
+      }
+      else {
+
+        if (path[0] in computedObjects) {
+          deleteByPath(vue, path.slice(0).concat(key))
+        }
+        else if (path[0] in shallowObjects) {
+          deleteByPath(obj, path.slice(0).concat(key))
+          deleteByPath(vue, path.slice(0).concat(key))
+        }
+        else {
+          deleteByPath(obj, path.slice(0).concat(key))
+        }
+
+      }
+      return true;
+    },
+  });
+
+
+  return new Proxy(vue, createHandler())
 }

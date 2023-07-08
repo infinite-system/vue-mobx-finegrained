@@ -120,8 +120,8 @@ export class LoginRegisterPresenter extends MessagesPresenter {
     viewTest2: computed,
     _awesome: observable,
 
-    hugeArray: observable.shallow,
-    derivedState: computed
+    hugeArray: observable,
+    // derivedState: computed
   }
   _string = 'string'
   _number = 1
@@ -196,11 +196,11 @@ export class LoginRegisterPresenter extends MessagesPresenter {
     return this._getterNestedObject
   }
 
-  get derivedState() {
-    console.log('calc')
-    console.trace()
-    return this.hugeArray.map(el => ({ testing: 1, struct: cloneDeep(el.struct) }))
-  }
+  // get derivedState() {
+  //   // console.log('calc')
+  //   // console.trace()
+  //   return this.hugeArray.map(el => ({ testing: 1, struct: cloneDeep(el.struct) }))
+  // }
 
 //   set derivedState(value) {
 //     this.hugeArray = value
@@ -218,13 +218,13 @@ export class LoginRegisterPresenter extends MessagesPresenter {
   }
 
   alertState() {
-    alert(this.vm.hugeArray[100].struct.user)
+    alert(this.vm.hugeArray[20].struct.user)
   }
 
   constructor () {
     super()
 
-    for(let i =0; i< 1020;i++){
+    for(let i =0; i<22;i++){
       this.hugeArray.push({
         prop: 'test',
         struct: {
@@ -235,37 +235,33 @@ export class LoginRegisterPresenter extends MessagesPresenter {
             id: i,
             user: 'vasya',
             text: 'hello',
-
             struct: {
               id: i,
               user: 'vasya',
               text: 'hello',
-
-              struct: {
-                id: i,
-                user: 'vasya',
-                text: 'hello'
-              }
-            }
-          },
-          struct: {
-            id: i,
-            user: 'vasya',
-            text: 'hello',
-            struct: {
-              id: i,
-              user: 'vasya',
-              text: 'hello',
-
               struct: {
                 id: i,
                 user: 'vasya',
                 text: 'hello',
-
                 struct: {
                   id: i,
                   user: 'vasya',
-                  text: 'hello'
+                  text: 'hello',
+                  struct: {
+                    id: i,
+                    user: 'vasya',
+                    text: 'hello',
+                    struct: {
+                      id: i,
+                      user: 'vasya',
+                      text: 'hello',
+                      struct: {
+                        id: i,
+                        user: 'vasya',
+                        text: 'hello',
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -279,16 +275,27 @@ export class LoginRegisterPresenter extends MessagesPresenter {
   }
 
   get viewTest () {
+    console.log('viewTest getter')
     return this.authenticationRepository.testVariable.map(pm => {
-      return { test1: pm.test1 + '(mapped)', sub: pm.sub, test2: pm.test2 + '(mapped)' }
+      return { test1: pm.test1 + '(mapped)', sub: cloneDeep(pm.sub), test2: pm.test2 + '(mapped)' }
     })
   }
+
+  //
+  // set viewTest (value) {
+  //   // console.log('this!', this)
+  //   console.log('viewTest setting....')
+  //   this.authenticationRepository.testVariable = value
+  //   this.authenticationRepository.testVariable = notify(this.authenticationRepository.testVariable)
+  // }
+
 
   get viewTest2 () {
     return this.authenticationRepository.testVariable2
   }
 
   setAuthRepoTest () {
+    console.log('yes')
     this.authenticationRepository.testVariable.push(
       { test1: 'test1!', test2: 'test1!', sub: { test: 'yes' } }
     )
@@ -297,25 +304,22 @@ export class LoginRegisterPresenter extends MessagesPresenter {
   _awesome = 0
 
 
-  //
-  set viewTest (value) {
-    // console.log('this!', this)
-    // this.authenticationRepository.testVariable = value
+
+  _awesome = {
+    a: {
+      b: {
+        c: 0
+      }
+    }
   }
 
-  setAuthRepoTest () {
-    this.authenticationRepository.testVariable.push(
-      { test1: 'test1!', test2: 'test1!', sub: { test: 'yes' } }
-    )
-  }
-
-  _awesome = 0
 
   get awesome () {
     return this._awesome
   }
 
   set awesome (value) {
+    console.log('set awesome')
     this._awesome = value
   }
 

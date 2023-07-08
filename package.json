@@ -27,7 +27,9 @@
     "mobx-utils": "^6.0.6",
     "vue": "^3.0.0"
   },
-  "dependencies": {},
+  "dependencies": {
+    "observable-slim": "^0.1.6"
+  },
   "devDependencies": {
     "@rushstack/eslint-patch": "^1.2.0",
     "@tsconfig/node18": "^2.0.1",

@@ -211,7 +211,7 @@ function test (presenterClass, mode = 'manual') {
             presenter._arrayReassign = [{ newProp: 1 }]
             expect(vm._arrayReassign[0].newProp).toBe(1)
             vm._arrayReassign[0].newProp = 2
-            await wait()
+            
             expect(presenter._arrayReassign[0].newProp).toBe(2)
           })
 
@@ -219,7 +219,7 @@ function test (presenterClass, mode = 'manual') {
             presenter._objectReassign = { prop: { prop: true } }
             expect(vm._objectReassign.prop.prop).toBe(true)
             vm._objectReassign.prop.prop = false
-            await wait()
+            
             expect(presenter._objectReassign.prop.prop).toBe(false)
           })
         })
@@ -332,7 +332,7 @@ function test (presenterClass, mode = 'manual') {
           expect(vm.mapObject.get('prop')).toBe(1)
 
           vm.mapObject.set('prop', 2)
-          await wait()
+          
           expect(presenter.mapObject.get('prop')).toBe(2)
         })
 
@@ -364,19 +364,19 @@ function test (presenterClass, mode = 'manual') {
 
           it('vue change string', async () => {
             vm._string = 'hello'
-            await wait()
+            
             expect(presenter._string).toBe('hello')
           })
 
           it('vue change boolean', async () => {
             vm._boolean = false
-            await wait()
+            
             expect(presenter._boolean).toBe(false)
           })
 
           it('vue change number', async () => {
             vm._number = 2
-            await wait()
+            
             expect(presenter._number).toBe(2)
           })
         })
@@ -388,32 +388,32 @@ function test (presenterClass, mode = 'manual') {
             it('vue push to array root', async () => {
               vm._array.push(1)
               vm._array.push(2)
-              await wait()
+              
               expect(presenter._array[0]).toBe(1)
               expect(presenter._array[1]).toBe(2)
             })
 
             it('vue splice array at root', async () => {
               vm._arraySplice.splice(1, 0, 2)
-              await wait()
+              
               expect(presenter._arraySplice[1]).toBe(2)
             })
 
             it('vue unshift array at root', async () => {
               vm._arrayUnshift.unshift(0)
-              await wait()
+              
               expect(presenter._arrayUnshift[0]).toBe(0)
             })
 
             it('vue pop array at root', async () => {
               vm._arrayPop.pop()
-              await wait()
+              
               expect(presenter._arrayPop[presenter._arrayPop.length - 1]).toBe(1)
             })
 
             it('vue shift array at root', async () => {
               vm._arrayShift.shift()
-              await wait()
+              
               expect(presenter._arrayShift[0]).toBe(2)
             })
           })
@@ -423,32 +423,32 @@ function test (presenterClass, mode = 'manual') {
             it('vue push to nested array', async () => {
               vm._narray[0][0].push(1)
               vm._narray[0][0].push(2)
-              await wait()
+              
               expect(presenter._narray[0][0][0]).toBe(1)
               expect(presenter._narray[0][0][1]).toBe(2)
             })
 
             it('vue splice nested array', async () => {
               vm._narraySplice[0][0].splice(1, 0, 2)
-              await wait()
+              
               expect(presenter._narraySplice[0][0][1]).toBe(2)
             })
 
             it('vue unshift nested array', async () => {
               vm._narrayUnshift[0][0].unshift(0)
-              await wait()
+              
               expect(presenter._narrayUnshift[0][0][0]).toBe(0)
             })
 
             it('vue pop nested array', async () => {
               vm._narrayPop[0][0].pop()
-              await wait()
+              
               expect(presenter._narrayPop[0][0][presenter._narrayPop.length - 1]).toBe(1)
             })
 
             it('vue shift nested array', async () => {
               vm._narrayShift[0][0].shift()
-              await wait()
+              
               expect(presenter._narrayShift[0][0][0]).toBe(2)
             })
           })
@@ -460,19 +460,19 @@ function test (presenterClass, mode = 'manual') {
 
             it('vue add object prop to root', async () => {
               vm._object.prop = 1
-              await wait()
+              
               expect(presenter._object.prop).toBe(1)
             })
 
             it('vue update object prop at root', async () => {
               vm._objectUpdate.prop = 2
-              await wait()
+              
               expect(presenter._objectUpdate.prop).toBe(2)
             })
 
             it('vue delete object prop at root', async () => {
               delete vm._objectDelete.prop
-              await wait()
+              
               expect(presenter._objectDelete.prop).toBeUndefined()
             })
           })
@@ -481,19 +481,19 @@ function test (presenterClass, mode = 'manual') {
 
             it('vue add nested object prop', async () => {
               vm._nobject.nest.nest.prop = 1
-              await wait()
+              
               expect(presenter._nobject.nest.nest.prop).toBe(1)
             })
 
             it('vue update nested object prop', async () => {
               vm._nobjectUpdate.nest.nest.prop = 2
-              await wait()
+              
               expect(presenter._nobjectUpdate.nest.nest.prop).toBe(2)
             })
 
             it('vue delete nested object prop', async () => {
               delete vm._nobjectDelete.nest.nest.prop
-              await wait()
+              
               expect(presenter._nobjectDelete.nest.nest.prop).toBeUndefined()
             })
           })
@@ -503,7 +503,7 @@ function test (presenterClass, mode = 'manual') {
 
           it('vue reassign array at root', async () => {
             vm._arrayReassign = [{ newProp: 1 }]
-            await wait()
+            
             expect(presenter._arrayReassign[0].newProp).toBe(1)
             presenter._arrayReassign[0].newProp = 2
             expect(vm._arrayReassign[0].newProp).toBe(2)
@@ -511,7 +511,7 @@ function test (presenterClass, mode = 'manual') {
 
           it('vue reassign whole observable object at root', async () => {
             vm._objectReassign = { prop: { prop: true } }
-            await wait()
+            
             expect(presenter._objectReassign.prop.prop).toBe(true)
 
             presenter._objectReassign.prop.prop = false
@@ -522,7 +522,7 @@ function test (presenterClass, mode = 'manual') {
             vm.mapObject = new Map([[
               'prop', 5
             ]])
-            await wait()
+            
             expect(presenter.mapObject.get('prop')).toBe(5)
 
             presenter.mapObject.set('prop', 2)
@@ -531,7 +531,7 @@ function test (presenterClass, mode = 'manual') {
 
           it('vue reassign Set', async () => {
             vm.setObject = new Set([1, 2])
-            await wait()
+            
             presenter.setObject.add(3)
             let i = 0
             presenter.setObject.forEach(el => {
@@ -558,7 +558,7 @@ function test (presenterClass, mode = 'manual') {
             it('vue add to Map', async () => {
               const obj = { prop: 1, prop2: 2 }
               vm.mapObject.set(1, 'bar')
-              await wait()
+              
               expect(presenter.mapObject.get(1)).toBe('bar')
 
               presenter.mapObject.set(1, 'foo')
@@ -569,10 +569,10 @@ function test (presenterClass, mode = 'manual') {
             it('vue delete from Map', async () => {
               vm.mapObject.set(1, 'foo')
               expect(isReactive(vm.mapObject)).toBe(true)
-              await wait()
+              
               expect(presenter.mapObject.get(1)).toBe('foo')
               vm.mapObject.delete(1)
-              await wait()
+              
               expect(presenter.mapObject.get(1)).toBeUndefined()
             })
 
