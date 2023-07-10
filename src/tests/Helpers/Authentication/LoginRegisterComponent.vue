@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // import { Observer, useLocalObservable } from 'mobx-vue-lite'
 import { reaction } from 'mobx'
-import { LoginRegisterPresenter } from '@/tests/Helpers/Authentication/LoginRegisterPresenter'
+import { TestPresenter } from '@/tests/Helpers/Authentication/TestPresenter.js'
 import MessagesComponent from '@/tests/Helpers/Core/Messages/MessagesComponent.vue'
 // import { useValidation } from '../Core/Providers/Validation'
 import { container } from '../AppIOC'
@@ -9,12 +9,12 @@ import { AuthenticationRepository } from "@/tests/Helpers/Authentication/Authent
 import { reactive } from "vue";
 
 
-const presenter: LoginRegisterPresenter = container.get(LoginRegisterPresenter);
-const vm: LoginRegisterPresenter = presenter.vm
+const presenter: TestPresenter = container.get(TestPresenter);
+const vm: TestPresenter = presenter.vm
 
 console.log('presenter', presenter)
 console.log('vm', vm)
-// const vm: LoginRegisterPresenter = presenter.getVm();
+// const vm: TestPresenter = presenter.getVm();
 // console.log('vm', vm)
 const auth = container.get(AuthenticationRepository);
 // let i = 0
@@ -30,8 +30,8 @@ console.log('a', a)
 setTimeout(() => presenter.addObjectProperty(), 1000);
 
 
-const props = Object.getOwnPropertyNames(LoginRegisterPresenter)
-  .concat(Object.getOwnPropertyNames(Object.getPrototypeOf(LoginRegisterPresenter)));
+const props = Object.getOwnPropertyNames(TestPresenter)
+  .concat(Object.getOwnPropertyNames(Object.getPrototypeOf(TestPresenter)));
 
 
 const proto = Object.getPrototypeOf(presenter)
@@ -89,7 +89,7 @@ const arr =    (proto && proto.constructor.name !== 'Object'
 
     <button @click="() => { vm.setAuthRepoTest() }">Set value push</button>
     <button @click="() => { vm.setAuthRepoArrayKey() }">Set array key & notify</button> <br />
-    <button @click="() => { vm.setInjectableObservableSubProperties() }">Set injectable authenticationRepository object properties</button>
+    <button @click="() => { vm.setInjectableObservableSubProperties() }">Set injectable authRepo object properties</button>
     <button @click="() => { vm.viewTest[0].sub.test = 1 }">Set value sub test</button>
     <button @click="() => { vm.setObjectSubProperty() }">Set password object sub property</button>
     <button @click="() => { vm.setSpliceArrayProperty() }">Set password splice array prop</button>

@@ -5,7 +5,7 @@ import { RouterRepository } from './Routing/RouterRepository'
 import { UserModel } from './Authentication/UserModel'
 import { NavigationRepository } from './Navigation/NavigationRepository'
 import { AppPresenter } from './AppPresenter'
-import { LoginRegisterPresenter } from "./Authentication/LoginRegisterPresenter";
+import { TestPresenter } from "./Authentication/TestPresenter.js";
 
 export class BaseIOC {
   container
@@ -25,7 +25,7 @@ export class BaseIOC {
     this.container.bind(NavigationRepository).to(NavigationRepository).inSingletonScope()
     this.container.bind(UserModel).to(UserModel).inSingletonScope()
     this.container.bind(AppPresenter).to(AppPresenter).inSingletonScope()
-    this.container.bind(LoginRegisterPresenter).to(LoginRegisterPresenter).inSingletonScope()
+    this.container.bind(TestPresenter).to(TestPresenter).inSingletonScope()
 
     return this.container
   }

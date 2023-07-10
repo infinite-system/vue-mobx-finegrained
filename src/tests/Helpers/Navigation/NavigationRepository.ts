@@ -7,7 +7,7 @@ import { action, computed, makeObservable } from 'mobx'
 @injectable()
 export class NavigationRepository {
 
-  @inject(AuthenticationRepository) authenticationRepository: AuthenticationRepository
+  @inject(AuthenticationRepository) authRepo: AuthenticationRepository
   @inject(Router) router: Router
 
   get currentNode () {

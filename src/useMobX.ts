@@ -1,180 +1,27 @@
 import { reactive, UnwrapNestedRefs, markRaw } from "vue";
 import { tryOnScopeDispose } from '@vueuse/core'
-import { reaction, ObservableMap, ObservableSet, observable, observe, computed } from 'mobx'
+import { reaction, observable, observe, computed, ObservableMap, ObservableSet, toJS } from 'mobx'
 import { deepObserve } from "mobx-utils";
-
-function getByPath (object, parts) {
-
-  let currentObject = object
-  const last = parts.pop()
-
-  for (const part of parts) {
-    currentObject = currentObject[part]
-    if (!currentObject) return
-  }
-
-  return currentObject[last]
-}
-
-function setByPath (object, parts, value) {
-
-  let currentObject = object
-  const last = parts.pop()
-
-  for (const part of parts) {
-    currentObject = currentObject[part]
-    if (!currentObject) return
-  }
-
-  currentObject[last] = value
-}
-
-const deleteByPath = (object, parts) => {
-
-  let currentObject = object
-  const last = parts.pop()
-
-  for (const part of parts) {
-    currentObject = currentObject[part]
-    if (!currentObject) return
-  }
-
-  delete currentObject[last]
-}
-
-function clone (obj) {
-
-  if (typeof obj !== 'object' || obj === null) {
-    return obj;
-  }
-
-  if (obj instanceof Date) {
-    return new Date(obj.getTime());
-  }
-
-  if (obj instanceof Array) {
-    const newArray = []
-    for (let i = 0; i < obj.length; i++) {
-      newArray[i] = obj[i]
-    }
-    return newArray;
-  }
-
-  if (obj instanceof Object) {
-    const newObj = {}
-    for (const key in obj) {
-      if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        newObj[key] = obj[key];
-      }
-    }
-    return newObj;
-  }
-}
-
-function deepClone (obj) {
-
-  if (typeof obj !== 'object' || obj === null || '__isActiveClone__' in obj) {
-    return obj
-  }
-
-  if (obj instanceof Date) {
-    return new Date(obj.getTime());
-  }
-
-  if (obj instanceof Array) {
-    const newArray = []
-    for (let i = 0; i < obj.length; i++) {
-      newArray[i] = deepClone(obj[i])
-    }
-    return newArray;
-  }
-
-  if (obj instanceof Object) {
-    const newObj = {}
-    for (const key in obj) {
-      if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        obj['__isActiveClone__'] = null
-        newObj[key] = deepClone(obj[key])
-        delete obj['__isActiveClone__']
-      }
-    }
-    return newObj;
-  }
-}
+import {
+  clone,
+  deepClone,
+  getByPath,
+  setByPath,
+  deleteByPath,
+  isObservableMapOrSet,
+  getAllProperties,
+  getMagicProps
+} from "./utils.js";
 
 /**
- * Notify MobX reactivity system of changes to propagate Vue reactive changes, by reassigning values.
+ * Notify MobX reactivity system of changes and
+ * propagate to Vue state, by reassigning values.
+ * Usually used to propagate deep computed changes.
  *
  * @param obj
  */
 export function notify (obj) {
   return clone(obj)
-}
-
-/**
- * Get setters and getters of a class instance.
- * Also gets all magic methods (getters and setters) stored in 'all' param.
- *
- * @param instance
- * @return { get: [...], set: [...], all: [...] }
- */
-function getMagicProps (instance) {
-
-  let proto = Object.getPrototypeOf(instance)
-
-  let props = []
-  while (proto && proto.constructor.name !== 'Object') {
-    props.push.apply(props, Object.entries(
-      Object.getOwnPropertyDescriptors(proto)
-    ))
-    proto = Object.getPrototypeOf(proto.constructor.prototype)
-  }
-
-  const magicProps = { get: {}, set: {}, all: {} }
-
-  for (let i = 0; i < props.length; i++) {
-    if (props[i][0] !== '__proto__') {
-      if (typeof props[i][1].get === 'function') {
-        // getters
-        magicProps.get[props[i][0]] = true
-        magicProps.all[props[i][0]] = true
-      }
-      if (typeof props[i][1].set === 'function') {
-        // setters
-        magicProps.set[props[i][0]] = true
-        magicProps.all[props[i][0]] = true
-      }
-    }
-  }
-
-  return magicProps
-}
-
-/**
- * Detect MobX observable Map.
- *
- * @param obj
- */
-function isObservableMap (obj) {
-  return obj instanceof ObservableMap
-}
-
-/**
- * Detect MobX observable Set.
- *
- * @param obj
- */
-function isObservableSet (obj) {
-  return obj instanceof ObservableSet
-}
-
-/**
- * Detect MobX observable Map or Set.
- *
- * @param obj
- */
-function isObservableMapOrSet (obj) {
-  return isObservableMap(obj) || isObservableSet(obj)
 }
 
 /**
@@ -193,53 +40,74 @@ export function shadowProp (prop): string {
  * @param observable
  * @param newValue
  */
-function reassignUpdateVue (state, observable, newValue) {
+function reassignUpdateVue (state, observable, newValue, opts) {
   // Set property of shadow state.
   state[observable] = isObservableMapOrSet(newValue)
     // If it's an MobX's ObservbaleMap or ObservableSet, copy reference only!
-    // Otherwise the reactivity Observable values get lost
+    // Otherwise the reactivity to Observable values get lost
     ? newValue
-    // Full clone the property without marking it raw
-    : deepClone(newValue)
+    // Full clone the property
+    : opts.deepCloneFn(newValue)
 }
 
 /**
- * Update Vue state property from MobX deeply.
+ * Update Vue state property from the default MobX observable(.deep)
  *
  * @param state
  * @param observable
  * @param change
  * @param path
+ * @param root
  */
-function deepUpdateVue (state, observable, change, path = '') {
+function deepUpdateVue (state, observable, change, path = '', root = null) {
 
   path = path === '' ? '' : path.replaceAll('/', '.').split('.')
+
+
+  // console.log(
+  //   'Deep update',
+  //   'prop:', observable,
+  //   'path:', path,
+  //   'change:', change,
+  //   'newValue:', change.newValue,
+  //   'root:', root
+  // )
+
+
   const ref = path === '' ? state[observable] : getByPath(state[observable], path)
 
-  // console.log(path, 'deep update',  change, change.newValue)
   switch (change.type) {
     case 'add':
     case 'update':
       switch (change.observableKind) {
-        case 'map':
-          ref.set(change.name, change.newValue);
+        case 'map': // Handles Maps
+          ref.set(change.name, deepClone(change.newValue));
           break;
-        case 'set':
-          ref.add(change.newValue);
+        case 'set': // Handles Sets
+          ref.add(deepClone(change.newValue));
           break;
         default:
-          ref[change.name] = change.newValue;
+          if (typeof ref === "object") {
+            if ('index' in change) { // Handles Arrays
+              ref[change.index] = deepClone(change.newValue);
+            }
+            else { // Handles Objects
+              ref[change.name] = change.newValue;
+            }
+          }
       }
       break;
-    case 'remove':
-      delete ref[change.name]
+    case 'remove': // Handles Objects
+      if (typeof ref === 'object') {
+        delete ref[change.name]
+      }
       break;
-    case 'delete':
+    case 'delete': // Handles Map.delete()
       ref.delete(change.name)
       break;
-    case 'splice':
+    case 'splice': // Handles Arrays .push, .pop, .splice, .unshift, .shift
       if (change.added.length) {
-        ref.splice(change.index, change.removedCount, ...change.added)
+        ref.splice(change.index, change.removedCount, ...deepClone(change.added))
       }
       else {
         ref.splice(change.index, change.removedCount)
@@ -259,30 +127,15 @@ function shallowUpdateVue (state, observable, change) {
   return deepUpdateVue(state, observable, change)
 }
 
-
 /**
  * Determine if an observable is MobX shallow or ref observable.
+ * observable.shallow: tracks first level props only
+ * observable.ref: tracks reassignments only
  *
  * @param method
  */
 function isMobXShallow (method) {
-  return method === observable.ref || method === observable.shallow
-}
-
-/**
- * Get all object properties including all ancestor prototype properties.
- *
- * @param obj
- */
-function getAllProperties (obj) {
-  let proto = Object.getPrototypeOf(obj)
-  let allProps = Object.getOwnPropertyNames(obj)
-  while (proto && proto.constructor.name !== 'Object') {
-    allProps.push.apply(allProps, Object.getOwnPropertyNames(proto)
-      .filter(el => !['caller', 'callee', 'arguments'].includes(el)))
-    proto = Object.getPrototypeOf(proto.constructor.prototype)
-  }
-  return allProps
+  return method === observable.shallow || method === observable.ref
 }
 
 /**
@@ -295,15 +148,24 @@ function getAllProperties (obj) {
  */
 function handleAutoObservables (observables, allProps, opts, shadowAttach) {
   if (opts.auto) {
+
     for (let i = 0; i < allProps.length; i++) {
+
       const prop = allProps[i]
+
       if ((prop in observables && observables[prop] === false)
         || (prop === opts.attach || prop === shadowAttach || prop === 'constructor')
       ) {
+        // Delete MobX false observable overrides, as well as [this.vm, this._vm, this.constructor] props from observables
         delete observables[prop]
         continue;
       }
-      observables[prop] = prop in observables ? observables[prop] : true
+
+      observables[prop] = prop in observables
+        // handle overrides
+        ? observables[prop]
+        // auto props assign to simple boolean true
+        : true
     }
   }
   return observables
@@ -318,11 +180,11 @@ function handleAutoObservables (observables, allProps, opts, shadowAttach) {
  */
 export function useMobX<Store extends Record<string, any>> (obj, observables, options = {}): UnwrapNestedRefs<Store | any> {
 
-  const originalObservables = observables;
   // Init options
   const opts = {
-    attach: 'vm', // property name to attach to obj
+    attach: 'vm', // default property name to attach to obj
     auto: false,
+    deepCloneFn: deepClone,
     ...options
   }
 
@@ -342,94 +204,98 @@ export function useMobX<Store extends Record<string, any>> (obj, observables, op
   // Handle makeAutoObservable() from MobX.
   observables = handleAutoObservables(observables, allProps, opts, shadowAttach)
 
-  // Collect all observable definitions
+  // Collect all observable definitions for Vue initial state
   const baseState = {}
   for (const prop in observables) {
     if (typeof magicProps.get[prop] !== 'undefined') {
       // Skip computed (computed gets assigned to vue in computed reaction initialization)
-      // to prevent multiple initializations
+      // to prevent multiple initializations, see [computedObserveDisposer] computed is initialized
       continue
     }
     baseState[prop] = typeof obj[prop] === 'function'
       ? function (...args) {
         return obj[prop].bind(obj)(...args)
       }
-      : (isObservableMapOrSet(obj[prop])
-        ? (
-          isObservableMap(obj[prop])
-            ? obj[prop]
-            : obj[prop]
-        )
-        : deepClone(obj[prop]))
+      : (isObservableMapOrSet(obj[prop]) ? obj[prop] : opts.deepCloneFn(obj[prop]))
   }
 
   // Setup the base combined MobX observable and Vue reactive state
-  const o = Object.assign({}, baseState)
-  const vue = reactive(o)
+  const vue = reactive(baseState)
 
   // Create shadow of all the props that are not observables
   allProps.forEach(prop => {
-    if (typeof observables[prop] === 'undefined' && prop !== opts.attach && prop !== shadowAttach) {
-      let getSet = {
+
+    if (!(prop in observables)
+      // skip this.vm && this.__vm shadow props
+      && prop !== opts.attach
+      && prop !== shadowAttach) {
+
+      Object.defineProperty(vue, prop, {
         get: typeof obj[prop] === 'function'
           ? function () {
             return function (...args) {
               return obj[prop].bind(obj)(...args)
             }
-          } : function () {
-            // console.log('get '+ prop)
+          }
+          : function () {
             return typeof obj[prop] === 'object' ? markRaw(obj[prop]) : obj[prop]
           },
         set: function (value) {
           obj[prop] = value;
         },
         enumerable: true
-      }
-      Object.defineProperty(vue, prop, getSet)
+      })
     }
   })
 
   // MobX reactions
   const createMobXObserver = {}
-  // MobX reaction disposers
+  const createReassignObserver = {}
   const mobxDisposer = {}
   const reassignObserveDisposer = {}
-  const createReassignObserver = {}
 
-  const shallowObjects = {}
-  const computedObjects = {}
+  // Collections for shallow and computed props
+  const computedProps = {}
+  const shallowRefProps = {}
+  const refProps = {}
 
-  // console.log('observables', observables)
-
-  // Determine if property should be watched by Vue & MobX
-  function shouldWatch (obj, prop, magicProps) {
-    return typeof magicProps.get[prop] !== 'undefined' || typeof obj[prop] !== 'function'
+  // Determine if property should be observed by Vue & MobX
+  function shouldObserve (obj, prop, magicProps) {
+    // computed getter should be observed
+    return typeof magicProps.get[prop] !== 'undefined'
+      // or anything that is not a function
+      || typeof obj[prop] !== 'function'
   }
 
   // Iterate over all the defined observables
   for (const prop in observables) {
 
-    if (!observables[prop]) continue
+    // false overrides should be skipped
+    if (observables[prop] === false) continue
 
-    if (shouldWatch(obj, prop, magicProps)) {
+    if (shouldObserve(obj, prop, magicProps)) {
 
+      // Collect shallow & ref observable props
       if (observables[prop] === observable.shallow || observables[prop] === observable.ref) {
-        shallowObjects[prop] = true
+        shallowRefProps[prop] = true
+        if (observables[prop] === observable.ref) {
+          refProps[prop] = true
+        }
       }
 
+      // Determine and collect computed getters
       let isComputed = false
       if (observables[prop] === computed || observables[prop] === computed.struct) {
-        computedObjects[prop] = true
+        computedProps[prop] = true
         isComputed = true
       }
       else if (opts.auto
         && observables[prop] !== false
         && typeof magicProps.get[prop] !== 'undefined'
       ) {
-        computedObjects[prop] = true
+        computedProps[prop] = true
         isComputed = true
       }
-
 
       // Create MobX reactions that will change the Vue shadow state reactive() props
       createMobXObserver[prop] = () => {
@@ -437,10 +303,12 @@ export function useMobX<Store extends Record<string, any>> (obj, observables, op
         if (isComputed) {
           // Handle computed getters
           // Computed getters should be updated shallowly
-          const computedHandler = newValue => reassignUpdateVue(vue, prop, newValue)
+          const computedHandler = newValue => {
+            reassignUpdateVue(vue, prop, newValue, opts)
+          }
 
           const computedObserveDisposer = reaction(() => {
-            // Computed is intialized into the Vue state only once
+            // Computed is initialized into the Vue state only once!
             // right here when reaction is initialized
             vue[prop] = obj[prop]
           }, computedHandler)
@@ -461,7 +329,7 @@ export function useMobX<Store extends Record<string, any>> (obj, observables, op
             // They have to be recreated
             mobxDisposer[prop]()
             // Set property of shadow Vue state.
-            reassignUpdateVue(vue, prop, newValue)
+            reassignUpdateVue(vue, prop, newValue, opts)
             // Recreate MobX shallow and deep watchers
             mobxDisposer[prop] = createMobXObserver[prop]()
           }
@@ -473,20 +341,20 @@ export function useMobX<Store extends Record<string, any>> (obj, observables, op
           // Handle deep object changes in MobX and mirror them into the Vue reactive state
           // based on those changes. More: https://github.com/mobxjs/mobx-utils#deepobserve
           // https://github.com/mobxjs/mobx/issues/214
-          const deepChangeHandler = (change, path, root) => deepUpdateVue(vue, prop, change, path)
+          const deepChangeHandler = (change, path, root) => {
+            deepUpdateVue(vue, prop, change, path, root)
+          }
 
           // Handle shallow object changes in MobX and mirror them into the Vue reactive state
           // based on those changes. More: https://github.com/mobxjs/mobx-utils#deepobserve
           // https://github.com/mobxjs/mobx/issues/214
-          const shallowChangeHandler = (change) => shallowUpdateVue(vue, prop, change)
+          const shallowChangeHandler = (change) => {
+            shallowUpdateVue(vue, prop, change)
+          }
 
-          let observeDisposer;
-          if (isMobXShallow(observables[prop])) {
-            observeDisposer = observe(obj[prop], shallowChangeHandler)
-          }
-          else {
-            observeDisposer = deepObserve(obj[prop], deepChangeHandler)
-          }
+          let observeDisposer = isMobXShallow(observables[prop])
+            ? observe(obj[prop], shallowChangeHandler)
+            : deepObserve(obj[prop], deepChangeHandler)
 
           return () => {
             // MobX shallow and deep disposers
@@ -504,7 +372,7 @@ export function useMobX<Store extends Record<string, any>> (obj, observables, op
   // Dispose MobX reactions and Vue watchers on
   // scope destruction to prevent memory leaks
   tryOnScopeDispose(() => {
-    for (let prop in mobxDisposer) mobxDisposer[prop]()
+    for (const prop in mobxDisposer) mobxDisposer[prop]()
   })
 
   // Attach to the source object
@@ -513,154 +381,249 @@ export function useMobX<Store extends Record<string, any>> (obj, observables, op
     obj[shadowAttach] = vue
   }
 
-  const shallowObjectHandler = (prop: string, path: string[] = []) => ({
+  function isMapOrSet (target) {
+    return target instanceof Map
+      || target instanceof Set
+      || target instanceof ObservableMap
+      || target instanceof ObservableSet
+  }
 
+  // Handle MobX observable.shallow and observable.ref
+  // Make them manually be able to change Vue state using Proxies
+  // This extends beyond standard MobX for high performance with large objects/arrays
+  // yet maintaining reactivity on the front-end
+  const shallowPropProxyHandler = (prop: string, path: string[] = []) => ({
+
+    /**
+     * Handle getting the prop value.
+     *
+     * @param target
+     * @param key
+     */
     get: (target, key): any => {
 
       if (typeof target === 'object') {
 
-        let value
+        // Handle functions
+        let fn
 
-        if (target instanceof Map
-          || target instanceof Set
-          || target instanceof ObservableMap
-          || target instanceof ObservableSet) {
-          value = target[key]
-          // console.log(`Getting Map/Set/ObservableMap/ObservableSet at root key [${key}]:`, value, 'constructor.name:', target.constructor.name)
+        if (isMapOrSet(target)) {
+          fn = target[key]
+          // console.log(`Getting Map/Set/ObservableMap/ObservableSet at root key [${key}]:`, value, 'instance:', target.constructor.name)
         }
         else {
           // console.log(`Getting deep function at:`, path.slice(0).concat(key))
-          value = path.length === 0 ? target[key] : getByPath(obj[prop], path.slice(0).concat(key))
+          fn = path.length === 0
+            // Handle root path
+            ? target[key]
+            // Handle deep path
+            : getByPath(obj[prop], path.slice(0).concat(key))
         }
 
-        if (typeof value === "function") return value.bind(target)
+        if (typeof fn === "function") {
+          // Handle methods for Objects, Arrays, Maps, Sets,
+          // like .push, .pop, .unshift, .shift, .delete, etc.
+          return fn.bind(target)
+        }
       }
 
       if (typeof target[key] === 'object' && target[key] !== null) {
         // console.log('Create new Proxy at path:', fullPath)
+        // Handle deep object
         return new Proxy(
           target[key],
-          shallowObjectHandler(prop, path.slice(0).concat(key))
+          shallowPropProxyHandler(prop, path.slice(0).concat(key))
         )
       }
 
       return target[key];
     },
+
+    /**
+     * Handle setting the prop value.
+     *
+     * @param target
+     * @param key
+     * @param value
+     */
     set: (target, key, value) => {
+      // Handle root path
       if (!path.length) {
-        // console.log('Setting root value at key:', key, 'value:', value)
+        // console.log('Setting root[prop] value at key:', key, 'value:', value)
         obj[prop][key] = value
+        if (prop in refProps) {
+          // MobX observable.ref will not change vue[prop][key]
+          // it observes only vue[prop] reassignment, so
+          // we change it manually:
+          vue[prop][key] = value
+        }
       }
+      // Handle deep path
       else {
-        console.log('Setting deep object value at path:', path.slice(0).concat(key), 'newValue:', value, 'oldValue:', getByPath(obj[prop], path.slice(0).concat(key)))
+        // console.log('Setting deep prop value at path:', path.slice(0).concat(key), 'newValue:', value, 'oldValue:', getByPath(obj[prop], path.slice(0).concat(key)))
         setByPath(vue[prop], path.slice(0).concat(key), value)
         setByPath(obj[prop], path.slice(0).concat(key), value)
       }
       return true;
     },
+
+    /**
+     * Handle deleting the prop value.
+     *
+     * @param target
+     * @param key
+     */
     deleteProperty (target, key) {
+      // Handle root path
       if (path.length === 0) {
         // console.log('Deleting root value at key:', key);
-        delete vue[prop][key]
+        delete obj[prop][key]
       }
+      // Handle deep path
       else {
-        deleteByPath(vue[prop], path.slice(0).concat(key))
+        deleteByPath(obj[prop], path.slice(0).concat(key))
       }
       return true;
     },
   });
 
-  for (const prop in shallowObjects) {
-    obj['_' + prop] = new Proxy(obj[prop], shallowObjectHandler(prop))
+  for (const prop in shallowRefProps) {
+    obj['_' + prop] = new Proxy(obj[prop], shallowPropProxyHandler(prop))
   }
 
-  const createHandler = (path: string[] = []) => ({
+  // Vue Proxy for fast synchronous assignment from Vue to MobX
+  // Note: initially this was implemented using Vues watch() method but
+  // was slow and asynchronous, so implementing it via a new Proxy()
+  // made things an order of magnitude faster and fully synchronous.
+  // Proxy vueHandler handles nested Objects, Arrays, Maps and Sets.
+  const vueProxyHandler = (path: string[] = []) => ({
 
+    /**
+     * Handle getting the prop value.
+     *
+     * @param target
+     * @param key
+     */
     get: (target, key): any => {
-
 
       if (typeof target === 'object') {
 
-        let value
-        if (target instanceof Map
-          || target instanceof Set
-          || target instanceof ObservableMap
-          || target instanceof ObservableSet) {
-          value = target[key]
-          // console.log(`Getting Map/Set/ObservableMap/ObservableSet at root key [${key}]:`, value, 'constructor.name:', target.constructor.name)
+        let fn
+
+        // Handle root path & Maps / Sets
+        if (path.length === 0 || isMapOrSet(target)) {
+          fn = target[key]
+          // console.log(`Getting root function at [${key}]:`, fn)
         }
+        // Handle deep path
         else {
-          // console.log(`Getting deep function at:`, path.slice(0).concat(key))
-          value = path.length === 0
-            ? target[key]
-            : getByPath(target, path.slice(0).concat(key))
+          fn = getByPath(target, path.slice(0).concat(key))
+          // console.log(`Getting deep function at:`, path.slice(0).concat(key), fn)
         }
 
-        if (typeof value === "function") return value.bind(target)
+        if (typeof fn === "function") {
+          // Handle methods for Objects, Arrays, Maps, Sets,
+          // like .push, .pop, .unshift, .shift, .delete, etc.
+          return fn.bind(target)
+        }
       }
 
       if (typeof target[key] === 'object' && target[key] !== null) {
+        // Handle deep object
         return new Proxy(
           target[key],
-          createHandler(path.slice(0).concat(key))
+          vueProxyHandler(path.slice(0).concat(key))
         )
       }
+
       return target[key];
     },
+
+    /**
+     * Handle setting the prop value.
+     *
+     * @param target
+     * @param key
+     * @param value
+     */
     set: (target, key, value) => {
-      // console.log(`Setting ${path.join('.') + '.' + key} to: `, value, path);
-      if (!path.length) {
-        // console.log('Setting at root...', key, 'value:', value)
-        if (key in computedObjects) {
+
+      // Handle root path
+      if (path.length === 0) {
+        // console.log('Proxy set at root key:', key, 'value:', value)
+        if (key in computedProps) {
           vue[key] = value
         }
         else {
           obj[key] = value
         }
       }
+      // Handle deep path
       else {
-
-        if (path[0] in computedObjects) {
+        // console.log(`Proxy set ${path.slice(0).concat(key).join('.')} to: `, value, path);
+        if (path[0] in computedProps) {
+          // Modify only Vue prop because MobX is in computed mode
           setByPath(vue, path.slice(0).concat(key), value)
         }
-        else if (path[0] in shallowObjects) {
+        else if (path[0] in shallowRefProps) {
+          // MobX observable.shallow and observable.ref
+          // Will not react so we have to modify both Vue and MobX
           setByPath(obj, path.slice(0).concat(key), value)
           setByPath(vue, path.slice(0).concat(key), value)
         }
         else {
           setByPath(obj, path.slice(0).concat(key), value)
+          // no need to set vue state by path, because MobX will handle it here.
+          // see deepObserve and deepChangeHandler() above
         }
       }
       return true;
     },
+
+    /**
+     * Handle deleting the prop value.
+     *
+     * @param target
+     * @param key
+     */
     deleteProperty (target, key) {
+      // console.log(`Deleting root prop ${path.slice(0).concat(key).join('.')}`);
+      // Handle root path
       if (path.length === 0) {
-        // console.log(`Deleting root prop ${path.join('.') + '.' + key}`);
-        if (key in computedObjects) {
+        if (key in computedProps) {
+          // Delete only Vue state prop since MobX is in computed mode
           delete vue[key]
         }
         else {
           delete obj[key]
+
+          // MobX does not detect delete on array keys
+          // so next line is necessary to delete the Vue key
+          delete vue[key]
         }
       }
+      // Handle deep path
       else {
-
-        if (path[0] in computedObjects) {
+        if (path[0] in computedProps) {
+          // Modify only Vue prop because MobX is in computed mode
           deleteByPath(vue, path.slice(0).concat(key))
         }
-        else if (path[0] in shallowObjects) {
+        else if (path[0] in shallowRefProps) {
+          // MobX observable.shallow and observable.ref
+          // Will not react so we have to modify both Vue and MobX
           deleteByPath(obj, path.slice(0).concat(key))
           deleteByPath(vue, path.slice(0).concat(key))
         }
         else {
           deleteByPath(obj, path.slice(0).concat(key))
+          // MobX does not detect delete on array keys
+          // so next line is necessary to delete the Vue key
+          deleteByPath(vue, path.slice(0).concat(key))
         }
-
       }
       return true;
     },
   });
 
-
-  return new Proxy(vue, createHandler())
+  return new Proxy(vue, vueProxyHandler())
 }

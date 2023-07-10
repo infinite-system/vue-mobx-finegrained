@@ -1,7 +1,7 @@
 import { describe, it, beforeEach, expect, vi } from 'vitest'
 import { AppTestHarness } from './Helpers/AppTestHarness'
-import { LoginRegisterPresenter } from "./Helpers/Authentication/LoginRegisterPresenter";
-import { LoginRegisterPresenterAuto } from "./Helpers/Authentication/LoginRegisterPresenterAuto";
+import { TestPresenter } from "./Helpers/Authentication/TestPresenter.js";
+import { TestPresenterAuto } from "./Helpers/Authentication/TestPresenterAuto.js";
 import { notify } from "../useMobX.js";
 import { isReactive } from "vue";
 import { ObservableMap, ObservableSet } from "mobx";
@@ -16,7 +16,7 @@ function wait () {
 
 function test (presenterClass, mode = 'manual') {
 
-  describe('----- mode: '+mode+ '----', () => {
+  describe('----- mode: ' + mode + '----', () => {
 
     beforeEach(() => {
       appTestHarness = new AppTestHarness()
@@ -49,34 +49,33 @@ function test (presenterClass, mode = 'manual') {
       }
 
 
-
       it('presenter non-observed properties accessible', () => {
-        expect(vm.testNonObservable).toBe(1)
+        expect(vm.nonObservablePrimitive).toBe(1)
       })
 
       it('presenter non-observed simple properties reassignable', () => {
-        vm.testNonObservable = 2
-        expect(presenter.testNonObservable).toBe(2)
+        vm.nonObservablePrimitive = 2
+        expect(presenter.nonObservablePrimitive).toBe(2)
       })
 
       it('presenter non-observed object properties reassignable', () => {
-        vm.testNonObservableObject = { test: 1 }
-        expect(presenter.testNonObservableObject.test).toBe(1)
+        vm.nonObservableObject = { test: 1 }
+        expect(presenter.nonObservableObject.test).toBe(1)
       })
 
       it('vm non-observed object properties are reassignable', () => {
-        presenter.testNonObservableObject = { test: 1 }
-        expect(vm.testNonObservableObject.test).toBe(1)
+        presenter.nonObservableObject = { test: 1 }
+        expect(vm.nonObservableObject.test).toBe(1)
       })
 
       it('presenter non-observed object sub-properties are reassignable', () => {
-        vm.testNonObservableObject.prop.prop.prop = 3
-        expect(presenter.testNonObservableObject.prop.prop.prop).toBe(3)
+        vm.nonObservableObject.prop.prop.prop = 3
+        expect(presenter.nonObservableObject.prop.prop.prop).toBe(3)
       })
 
       it('presenter non-observed object sub-properties are reassignable', () => {
-        vm.testNonObservableObject.prop.prop.prop = 3
-        expect(presenter.testNonObservableObject.prop.prop.prop).toBe(3)
+        vm.nonObservableObject.prop.prop.prop = 3
+        expect(presenter.nonObservableObject.prop.prop.prop).toBe(3)
       })
     })
 
@@ -87,18 +86,18 @@ function test (presenterClass, mode = 'manual') {
         describe('mobX change primitive', () => {
 
           it('mobX change string', () => {
-            presenter._string = 'hello'
-            expect(vm._string).toBe('hello')
+            presenter.string = 'hello'
+            expect(vm.string).toBe('hello')
           })
 
           it('mobX change boolean', () => {
-            presenter._boolean = false
-            expect(vm._boolean).toBe(false)
+            presenter.boolean = false
+            expect(vm.boolean).toBe(false)
           })
 
           it('mobX change number', () => {
-            presenter._number = 2
-            expect(vm._number).toBe(2)
+            presenter.number = 2
+            expect(vm.number).toBe(2)
           })
         })
 
@@ -107,60 +106,95 @@ function test (presenterClass, mode = 'manual') {
           describe('mobX change array at root', () => {
 
             it('mobX push to array root', () => {
-              presenter._array.push(1)
-              presenter._array.push(2)
-              expect(vm._array[0]).toBe(1)
-              expect(vm._array[1]).toBe(2)
+              presenter.array.push(1)
+              presenter.array.push(2)
+              expect(vm.array[0]).toBe(1)
+              expect(vm.array[1]).toBe(2)
             })
 
             it('mobX splice array at root', () => {
-              presenter._arraySplice.splice(1, 0, 2)
-              expect(vm._arraySplice[1]).toBe(2)
+              presenter.arraySplice.splice(1, 0, 2)
+              expect(vm.arraySplice[1]).toBe(2)
             })
 
             it('mobX unshift array at root', () => {
-              presenter._arrayUnshift.unshift(0)
-              expect(vm._arrayUnshift[0]).toBe(0)
+              presenter.arrayUnshift.unshift(0)
+              expect(vm.arrayUnshift[0]).toBe(0)
             })
 
             it('mobX pop array at root', () => {
-              presenter._arrayPop.pop()
-              expect(vm._arrayPop[vm._arrayPop.length - 1]).toBe(1)
+              presenter.arrayPop.pop()
+              expect(vm.arrayPop[vm.arrayPop.length - 1]).toBe(1)
             })
 
             it('mobX shift array at root', () => {
-              presenter._arrayShift.shift()
-              expect(vm._arrayShift[0]).toBe(2)
+              presenter.arrayShift.shift()
+              expect(vm.arrayShift[0]).toBe(2)
             })
           })
 
           describe('mobX change deep nested array', () => {
 
             it('mobX push to nested array', () => {
-              presenter._narray[0][0].push(1)
-              presenter._narray[0][0].push(2)
-              expect(vm._narray[0][0][0]).toBe(1)
-              expect(vm._narray[0][0][1]).toBe(2)
+              presenter.arrayNested[0][0].push(1)
+              presenter.arrayNested[0][0].push(2)
+              expect(vm.arrayNested[0][0][0]).toBe(1)
+              expect(vm.arrayNested[0][0][1]).toBe(2)
             })
 
             it('mobX splice nested array', () => {
-              presenter._narraySplice[0][0].splice(1, 0, 2)
-              expect(vm._narraySplice[0][0][1]).toBe(2)
+              presenter.arrayNestedSplice[0][0].splice(1, 0, 2)
+              expect(vm.arrayNestedSplice[0][0][1]).toBe(2)
             })
 
             it('mobX unshift nested array', () => {
-              presenter._narrayUnshift[0][0].unshift(0)
-              expect(vm._narrayUnshift[0][0][0]).toBe(0)
+              presenter.arrayNestedUnshift[0][0].unshift(0)
+              expect(vm.arrayNestedUnshift[0][0][0]).toBe(0)
             })
 
             it('mobX pop nested array', () => {
-              presenter._narrayPop[0][0].pop()
-              expect(vm._narrayPop[0][0][vm._narrayPop.length - 1]).toBe(1)
+              presenter.arrayNestedPop[0][0].pop()
+              expect(vm.arrayNestedPop[0][0][vm.arrayNestedPop.length - 1]).toBe(1)
             })
 
             it('mobX shift nested array', () => {
-              presenter._narrayShift[0][0].shift()
-              expect(vm._narrayShift[0][0][0]).toBe(2)
+              presenter.arrayNestedShift[0][0].shift()
+              expect(vm.arrayNestedShift[0][0][0]).toBe(2)
+            })
+
+
+            it('mobX splice delete from nested array and add another element', () => {
+              presenter.arrayNestedShift[0].splice(0, 1)
+              presenter.arrayNestedShift[0].push([2, 3])
+              expect(presenter.arrayNestedShift[0]).toEqual([[2, 3]])
+            })
+
+            it('mobX splice delete from nested array after pushing twice', () => {
+              presenter.arrayNestedShift[0].push([2, 3])
+              presenter.arrayNestedShift[0].push([4, 5])
+              presenter.arrayNestedShift[0].splice(0, 1)
+              expect(vm.arrayNestedShift[0]).toEqual([[2, 3], [4, 5]])
+            })
+
+            it('mobX splice delete 2 items from nested array after pushing twice', () => {
+              presenter.arrayNestedShift[0].push([2, 3])
+              presenter.arrayNestedShift[0].push([4, 5])
+              presenter.arrayNestedShift[0].splice(0, 2)
+              expect(vm.arrayNestedShift[0]).toEqual([[4, 5]])
+            })
+
+            it('mobX splice delete 2 items from nested array after pushing twice and insert another array', () => {
+              presenter.arrayNestedShift[0].push([2, 3])
+              presenter.arrayNestedShift[0].push([4, 5])
+              presenter.arrayNestedShift[0].splice(0, 2, [7, 8])
+              expect(vm.arrayNestedShift[0]).toEqual([[7, 8], [4, 5]])
+            })
+
+            it('mobX splice delete 2 items from nested array after pushing twice and insert object', () => {
+              presenter.arrayNestedShift[0].push([2, 3])
+              presenter.arrayNestedShift[0].push([4, 5])
+              presenter.arrayNestedShift[0].splice(0, 2, { test: { test: 1 } })
+              expect(vm.arrayNestedShift[0]).toEqual([{ test: { test: 1 } }, [4, 5]])
             })
           })
         })
@@ -170,36 +204,36 @@ function test (presenterClass, mode = 'manual') {
           describe('mobX change root props', () => {
 
             it('mobX add object prop to root', () => {
-              presenter._object.prop = 1
-              expect(vm._object.prop).toBe(1)
+              presenter.object.prop = 1
+              expect(vm.object.prop).toBe(1)
             })
 
             it('mobX update object prop at root', () => {
-              presenter._objectUpdate.prop = 2
-              expect(vm._objectUpdate.prop).toBe(2)
+              presenter.objectUpdate.prop = 2
+              expect(vm.objectUpdate.prop).toBe(2)
             })
 
             it('mobX delete object prop at root', () => {
-              delete presenter._objectDelete.prop
-              expect(vm._objectDelete.prop).toBeUndefined()
+              delete presenter.objectDelete.prop
+              expect(vm.objectDelete.prop).toBeUndefined()
             })
           })
 
           describe('mobX change deep nested props', () => {
 
             it('mobX add nested object prop', () => {
-              presenter._nobject.nest.nest.prop = 1
-              expect(vm._nobject.nest.nest.prop).toBe(1)
+              presenter.objectNested.nest.nest.prop = 1
+              expect(vm.objectNested.nest.nest.prop).toBe(1)
             })
 
             it('mobX update nested object prop', () => {
-              presenter._nobjectUpdate.nest.nest.prop = 2
-              expect(vm._nobjectUpdate.nest.nest.prop).toBe(2)
+              presenter.objectNestedUpdate.nest.nest.prop = 2
+              expect(vm.objectNestedUpdate.nest.nest.prop).toBe(2)
             })
 
             it('mobX delete nested object prop', () => {
-              delete presenter._nobjectDelete.nest.nest.prop
-              expect(vm._nobjectDelete.nest.nest.prop).toBeUndefined()
+              delete presenter.objectNestedDelete.nest.nest.prop
+              expect(vm.objectNestedDelete.nest.nest.prop).toBeUndefined()
             })
           })
 
@@ -208,19 +242,19 @@ function test (presenterClass, mode = 'manual') {
         describe('mobX object/array reassignment & maintain reactivity', () => {
 
           it('mobX reassign array at root', async () => {
-            presenter._arrayReassign = [{ newProp: 1 }]
-            expect(vm._arrayReassign[0].newProp).toBe(1)
-            vm._arrayReassign[0].newProp = 2
-            
-            expect(presenter._arrayReassign[0].newProp).toBe(2)
+            presenter.arrayReassign = [{ newProp: 1 }]
+            expect(vm.arrayReassign[0].newProp).toBe(1)
+            vm.arrayReassign[0].newProp = 2
+
+            expect(presenter.arrayReassign[0].newProp).toBe(2)
           })
 
           it('mobX reassign whole observable object at root', async () => {
-            presenter._objectReassign = { prop: { prop: true } }
-            expect(vm._objectReassign.prop.prop).toBe(true)
-            vm._objectReassign.prop.prop = false
-            
-            expect(presenter._objectReassign.prop.prop).toBe(false)
+            presenter.objectReassign = { prop: { prop: true } }
+            expect(vm.objectReassign.prop.prop).toBe(true)
+            vm.objectReassign.prop.prop = false
+
+            expect(presenter.objectReassign.prop.prop).toBe(false)
           })
         })
       })
@@ -250,7 +284,7 @@ function test (presenterClass, mode = 'manual') {
 
         describe('mobX getter propagation for object', () => {
 
-          it('mobX add property to object',  () => {
+          it('mobX add property to object', () => {
             presenter._getterObject.prop2 = 3
             presenter._getterObject = notify(presenter._getterObject)
             expect(vm.getterObject.prop2).toBe(3)
@@ -311,19 +345,19 @@ function test (presenterClass, mode = 'manual') {
       describe('mobx object/array reassignment & maintain reactivity', async () => {
 
         it('mobx reassign array at root', async () => {
-          presenter._arrayReassign = [{ newProp: 1 }]
-          expect(vm._arrayReassign[0].newProp).toBe(1)
+          presenter.arrayReassign = [{ newProp: 1 }]
+          expect(vm.arrayReassign[0].newProp).toBe(1)
 
-          vm._arrayReassign[0].newProp = 2
-          expect(vm._arrayReassign[0].newProp).toBe(2)
+          vm.arrayReassign[0].newProp = 2
+          expect(vm.arrayReassign[0].newProp).toBe(2)
         })
 
         it('mobx reassign whole observable object at root', async () => {
-          presenter._objectReassign = { prop: { prop: true } }
-          expect(vm._objectReassign.prop.prop).toBe(true)
+          presenter.objectReassign = { prop: { prop: true } }
+          expect(vm.objectReassign.prop.prop).toBe(true)
 
-          vm._objectReassign.prop.prop = false
-          expect(vm._objectReassign.prop.prop).toBe(false)
+          vm.objectReassign.prop.prop = false
+          expect(vm.objectReassign.prop.prop).toBe(false)
         })
 
         it('mobx reassign Map', async () => {
@@ -332,7 +366,7 @@ function test (presenterClass, mode = 'manual') {
           expect(vm.mapObject.get('prop')).toBe(1)
 
           vm.mapObject.set('prop', 2)
-          
+
           expect(presenter.mapObject.get('prop')).toBe(2)
         })
 
@@ -363,21 +397,21 @@ function test (presenterClass, mode = 'manual') {
         describe('vue change primitive', () => {
 
           it('vue change string', async () => {
-            vm._string = 'hello'
-            
-            expect(presenter._string).toBe('hello')
+            vm.string = 'hello'
+
+            expect(presenter.string).toBe('hello')
           })
 
           it('vue change boolean', async () => {
-            vm._boolean = false
-            
-            expect(presenter._boolean).toBe(false)
+            vm.boolean = false
+
+            expect(presenter.boolean).toBe(false)
           })
 
           it('vue change number', async () => {
-            vm._number = 2
-            
-            expect(presenter._number).toBe(2)
+            vm.number = 2
+
+            expect(presenter.number).toBe(2)
           })
         })
 
@@ -386,70 +420,108 @@ function test (presenterClass, mode = 'manual') {
           describe('vue change array at root', async () => {
 
             it('vue push to array root', async () => {
-              vm._array.push(1)
-              vm._array.push(2)
-              
-              expect(presenter._array[0]).toBe(1)
-              expect(presenter._array[1]).toBe(2)
+              vm.array.push(1)
+              vm.array.push(2)
+
+              expect(presenter.array[0]).toBe(1)
+              expect(presenter.array[1]).toBe(2)
             })
 
             it('vue splice array at root', async () => {
-              vm._arraySplice.splice(1, 0, 2)
-              
-              expect(presenter._arraySplice[1]).toBe(2)
+              vm.arraySplice.splice(1, 0, 2)
+
+              expect(presenter.arraySplice[1]).toBe(2)
             })
 
             it('vue unshift array at root', async () => {
-              vm._arrayUnshift.unshift(0)
-              
-              expect(presenter._arrayUnshift[0]).toBe(0)
+              vm.arrayUnshift.unshift(0)
+
+              expect(presenter.arrayUnshift[0]).toBe(0)
             })
 
             it('vue pop array at root', async () => {
-              vm._arrayPop.pop()
-              
-              expect(presenter._arrayPop[presenter._arrayPop.length - 1]).toBe(1)
+              vm.arrayPop.pop()
+
+              expect(presenter.arrayPop[presenter.arrayPop.length - 1]).toBe(1)
             })
 
             it('vue shift array at root', async () => {
-              vm._arrayShift.shift()
-              
-              expect(presenter._arrayShift[0]).toBe(2)
+              vm.arrayShift.shift()
+
+              expect(presenter.arrayShift[0]).toBe(2)
             })
           })
 
           describe('vue change deep nested array', async () => {
 
             it('vue push to nested array', async () => {
-              vm._narray[0][0].push(1)
-              vm._narray[0][0].push(2)
-              
-              expect(presenter._narray[0][0][0]).toBe(1)
-              expect(presenter._narray[0][0][1]).toBe(2)
+              vm.arrayNested[0][0].push(1)
+              vm.arrayNested[0][0].push(2)
+
+              expect(presenter.arrayNested[0][0][0]).toBe(1)
+              expect(presenter.arrayNested[0][0][1]).toBe(2)
             })
 
             it('vue splice nested array', async () => {
-              vm._narraySplice[0][0].splice(1, 0, 2)
-              
-              expect(presenter._narraySplice[0][0][1]).toBe(2)
+              vm.arrayNestedSplice[0][0].splice(1, 0, 2)
+
+              expect(presenter.arrayNestedSplice[0][0][1]).toBe(2)
             })
 
             it('vue unshift nested array', async () => {
-              vm._narrayUnshift[0][0].unshift(0)
-              
-              expect(presenter._narrayUnshift[0][0][0]).toBe(0)
+              vm.arrayNestedUnshift[0][0].unshift(0)
+
+              expect(presenter.arrayNestedUnshift[0][0][0]).toBe(0)
             })
 
             it('vue pop nested array', async () => {
-              vm._narrayPop[0][0].pop()
-              
-              expect(presenter._narrayPop[0][0][presenter._narrayPop.length - 1]).toBe(1)
+              vm.arrayNestedPop[0][0].pop()
+
+              expect(presenter.arrayNestedPop[0][0][presenter.arrayNestedPop.length - 1]).toBe(1)
             })
 
             it('vue shift nested array', async () => {
-              vm._narrayShift[0][0].shift()
-              
-              expect(presenter._narrayShift[0][0][0]).toBe(2)
+              vm.arrayNestedShift[0][0].shift()
+
+              expect(presenter.arrayNestedShift[0][0][0]).toBe(2)
+            })
+
+
+            it('vue splice delete from nested array', () => {
+              vm.arrayNestedShift[0].splice(0, 1)
+
+              expect(presenter.arrayNestedShift[0]).toEqual([])
+            })
+
+            it('vue splice delete from nested array and add another element', () => {
+              vm.arrayNestedShift[0].splice(0, 1)
+              vm.arrayNestedShift[0].push([3, 4])
+
+              expect(presenter.arrayNestedShift[0]).toEqual([[3, 4]])
+            })
+
+            it('vue splice delete from nested array after pushing twice', () => {
+              vm.arrayNestedShift[0].push([3, 4])
+              vm.arrayNestedShift[0].push([5, 6])
+              vm.arrayNestedShift[0].splice(0, 1)
+
+              expect(presenter.arrayNestedShift[0]).toEqual([[3, 4], [5, 6]])
+            })
+
+            it('vue splice delete 2 items from nested array after pushing twice and insert another array', () => {
+              vm.arrayNestedShift[0].push([2, 3])
+              vm.arrayNestedShift[0].push([4, 5])
+              vm.arrayNestedShift[0].splice(0, 2, [7, 8])
+
+              expect(presenter.arrayNestedShift[0]).toEqual([[7, 8], [4, 5]])
+            })
+
+            it('vue splice delete 2 items from nested array after pushing twice and insert object', () => {
+              vm.arrayNestedShift[0].push([2, 3])
+              vm.arrayNestedShift[0].push([4, 5])
+              vm.arrayNestedShift[0].splice(0, 2, { test: { test: 1 } })
+
+              expect(presenter.arrayNestedShift[0]).toEqual([{ test: { test: 1 } }, [4, 5]])
             })
           })
         })
@@ -459,42 +531,42 @@ function test (presenterClass, mode = 'manual') {
           describe('vue change root props', async () => {
 
             it('vue add object prop to root', async () => {
-              vm._object.prop = 1
-              
-              expect(presenter._object.prop).toBe(1)
+              vm.object.prop = 1
+
+              expect(presenter.object.prop).toBe(1)
             })
 
             it('vue update object prop at root', async () => {
-              vm._objectUpdate.prop = 2
-              
-              expect(presenter._objectUpdate.prop).toBe(2)
+              vm.objectUpdate.prop = 2
+
+              expect(presenter.objectUpdate.prop).toBe(2)
             })
 
             it('vue delete object prop at root', async () => {
-              delete vm._objectDelete.prop
-              
-              expect(presenter._objectDelete.prop).toBeUndefined()
+              delete vm.objectDelete.prop
+
+              expect(presenter.objectDelete.prop).toBeUndefined()
             })
           })
 
           describe('vue change deep nested props', async () => {
 
             it('vue add nested object prop', async () => {
-              vm._nobject.nest.nest.prop = 1
-              
-              expect(presenter._nobject.nest.nest.prop).toBe(1)
+              vm.objectNested.nest.nest.prop = 1
+
+              expect(presenter.objectNested.nest.nest.prop).toBe(1)
             })
 
             it('vue update nested object prop', async () => {
-              vm._nobjectUpdate.nest.nest.prop = 2
-              
-              expect(presenter._nobjectUpdate.nest.nest.prop).toBe(2)
+              vm.objectNestedUpdate.nest.nest.prop = 2
+
+              expect(presenter.objectNestedUpdate.nest.nest.prop).toBe(2)
             })
 
             it('vue delete nested object prop', async () => {
-              delete vm._nobjectDelete.nest.nest.prop
-              
-              expect(presenter._nobjectDelete.nest.nest.prop).toBeUndefined()
+              delete vm.objectNestedDelete.nest.nest.prop
+
+              expect(presenter.objectNestedDelete.nest.nest.prop).toBeUndefined()
             })
           })
         })
@@ -502,27 +574,27 @@ function test (presenterClass, mode = 'manual') {
         describe('vue object/array reassignment & maintain reactivity', async () => {
 
           it('vue reassign array at root', async () => {
-            vm._arrayReassign = [{ newProp: 1 }]
-            
-            expect(presenter._arrayReassign[0].newProp).toBe(1)
-            presenter._arrayReassign[0].newProp = 2
-            expect(vm._arrayReassign[0].newProp).toBe(2)
+            vm.arrayReassign = [{ newProp: 1 }]
+
+            expect(presenter.arrayReassign[0].newProp).toBe(1)
+            presenter.arrayReassign[0].newProp = 2
+            expect(vm.arrayReassign[0].newProp).toBe(2)
           })
 
           it('vue reassign whole observable object at root', async () => {
-            vm._objectReassign = { prop: { prop: true } }
-            
-            expect(presenter._objectReassign.prop.prop).toBe(true)
+            vm.objectReassign = { prop: { prop: true } }
 
-            presenter._objectReassign.prop.prop = false
-            expect(vm._objectReassign.prop.prop).toBe(false)
+            expect(presenter.objectReassign.prop.prop).toBe(true)
+
+            presenter.objectReassign.prop.prop = false
+            expect(vm.objectReassign.prop.prop).toBe(false)
           })
 
           it('vue reassign Map', async () => {
             vm.mapObject = new Map([[
               'prop', 5
             ]])
-            
+
             expect(presenter.mapObject.get('prop')).toBe(5)
 
             presenter.mapObject.set('prop', 2)
@@ -531,7 +603,7 @@ function test (presenterClass, mode = 'manual') {
 
           it('vue reassign Set', async () => {
             vm.setObject = new Set([1, 2])
-            
+
             presenter.setObject.add(3)
             let i = 0
             presenter.setObject.forEach(el => {
@@ -558,7 +630,7 @@ function test (presenterClass, mode = 'manual') {
             it('vue add to Map', async () => {
               const obj = { prop: 1, prop2: 2 }
               vm.mapObject.set(1, 'bar')
-              
+
               expect(presenter.mapObject.get(1)).toBe('bar')
 
               presenter.mapObject.set(1, 'foo')
@@ -569,10 +641,10 @@ function test (presenterClass, mode = 'manual') {
             it('vue delete from Map', async () => {
               vm.mapObject.set(1, 'foo')
               expect(isReactive(vm.mapObject)).toBe(true)
-              
+
               expect(presenter.mapObject.get(1)).toBe('foo')
               vm.mapObject.delete(1)
-              
+
               expect(presenter.mapObject.get(1)).toBeUndefined()
             })
 
@@ -610,5 +682,5 @@ function test (presenterClass, mode = 'manual') {
   })
 }
 
-test(LoginRegisterPresenter, 'manual')
-test(LoginRegisterPresenterAuto, 'auto')
+test(TestPresenter, 'manual')
+test(TestPresenterAuto, 'auto')

@@ -11,10 +11,10 @@ yarn add vue-mobx-finegrained
 
 ## Usage
 ```js
-// LoginRegisterPresenter.js
+// TestPresenter.js
 import { useMobX } from 'vue-mobx-finegrained'
 
-export class LoginRegisterPresenter {
+export class TestPresenter {
   
   email = null
   password = null
@@ -68,10 +68,10 @@ export class LoginRegisterPresenter {
 
 ```html
 <script setup>
-   import { LoginRegisterPresenter } from "./LoginRegisterPresenter.js";
+   import { TestPresenter } from "./TestPresenter.js";
 
    // Instantiate the presenter
-   const presenter = new LoginRegisterPresenter()
+   const presenter = new TestPresenter()
    
    // Vue shadow ViewModel(vm) reactive() object 
    const vm = presenter.vm

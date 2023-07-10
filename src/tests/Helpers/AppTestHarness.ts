@@ -4,7 +4,7 @@ import { Types } from './Core/Types'
 import { BaseIOC } from './BaseIOC'
 import { FakeRouterGateway } from './Routing/FakeRouterGateway'
 import { FakeHttpGateway } from './Core/FakeHttpGateway'
-import { LoginRegisterPresenter } from './Authentication/LoginRegisterPresenter'
+import { TestPresenter } from './Authentication/TestPresenter.js'
 import { SingleBooksResultStub } from './Stubs/SingleBooksResultStub'
 import { Router } from './Routing/Router'
 import { AppPresenter } from './AppPresenter'
@@ -56,7 +56,7 @@ export class AppTestHarness {
     })
 
 
-    this.loginRegisterPresenter = this.container.get(LoginRegisterPresenter)
+    this.loginRegisterPresenter = this.container.get(TestPresenter)
 
 
   }
@@ -79,7 +79,7 @@ export class AppTestHarness {
       return Promise.resolve(loginStub())
     })
     //
-    // this.loginRegisterPresenter = this.container.get(LoginRegisterPresenter)
+    // this.loginRegisterPresenter = this.container.get(TestPresenter)
     // this.loginRegisterPresenter.email = 'a@b.com'
     // this.loginRegisterPresenter.password = '123'
     // await this.loginRegisterPresenter.login()

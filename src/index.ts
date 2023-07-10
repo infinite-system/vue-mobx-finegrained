@@ -1,6 +1,9 @@
 import { useMobX, notify } from "./useMobX";
+import { clone, deepClone } from "./utils";
 
 export {
   useMobX,
-  notify
+  notify,
+  clone,
+  deepClone
 };

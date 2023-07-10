@@ -12,11 +12,11 @@ class Test {
   test = 1
 }
 @injectable()
-export class LoginRegisterPresenterAuto  {
+export class TestPresenterAuto {
 
-  testNonObservable = 1
+  nonObservablePrimitive = 1
 
-  testNonObservableObject = {
+  nonObservableObject = {
     prop: {
       prop: {
         prop: 1
@@ -28,7 +28,7 @@ export class LoginRegisterPresenterAuto  {
 
   @inject(Test) test: Test
 
-  @inject(AuthenticationRepository) authenticationRepository: AuthenticationRepository
+  @inject(AuthenticationRepository) authRepo: AuthenticationRepository
 
   @inject(MessagesRepository) messagesRepository: MessagesRepository
 
@@ -56,32 +56,32 @@ export class LoginRegisterPresenterAuto  {
   option = null
 
 
-  _string = 'string'
-  _number = 1
-  _boolean = true
+  string = 'string'
+  number = 1
+  boolean = true
 
-  _array = []
-  _arraySplice = [1, 3, 5]
-  _arrayUnshift = [1, 2]
-  _arrayPop = [1, 2]
-  _arrayShift = [1, 2]
+  array = []
+  arraySplice = [1, 3, 5]
+  arrayUnshift = [1, 2]
+  arrayPop = [1, 2]
+  arrayShift = [1, 2]
 
-  _narray = [[[]]]
-  _narraySplice = [[[1, 3, 5]]]
-  _narrayUnshift = [[[1, 2]]]
-  _narrayPop = [[[1, 2]]]
-  _narrayShift = [[[1, 2]]]
+  arrayNested = [[[]]]
+  arrayNestedSplice = [[[1, 3, 5]]]
+  arrayNestedUnshift = [[[1, 2]]]
+  arrayNestedPop = [[[1, 2]]]
+  arrayNestedShift = [[[1, 2]]]
 
-  _object = {}
-  _objectUpdate = { prop: 1 }
-  _objectDelete = { prop: 1 }
+  object = {}
+  objectUpdate = { prop: 1 }
+  objectDelete = { prop: 1 }
 
-  _nobject = { nest: { nest: {} } }
-  _nobjectUpdate = { nest: { nest: { prop: 1 } } }
-  _nobjectDelete = { nest: { nest: { prop: 1 } } }
+  objectNested = { nest: { nest: {} } }
+  objectNestedUpdate = { nest: { nest: { prop: 1 } } }
+  objectNestedDelete = { nest: { nest: { prop: 1 } } }
 
-  _arrayReassign = [{ prop: 1 }]
-  _objectReassign = { prop: { prop: 1 } }
+  arrayReassign = [{ prop: 1 }]
+  objectReassign = { prop: { prop: 1 } }
 
   _getterArray = []
   _getterNestedArray = [{ prop: 1, prop2: 2, prop3: { prop: 1 } }]
@@ -131,13 +131,13 @@ export class LoginRegisterPresenterAuto  {
 
   observable = {
     observable: false,
-    testNonObservableObject: false,
-    testNonObservable: false,
+    nonObservableObject: false,
+    nonObservablePrimitive: false,
     customObservable: false,
     getterObject: computed,
     messagesRepository: false,
     router: false,
-    authenticationRepository: false,
+    authRepo: false,
     vm: false,
   }
 
@@ -157,21 +157,21 @@ export class LoginRegisterPresenterAuto  {
 
 
   get viewTest () {
-    return this.authenticationRepository.testVariable.map(pm => {
+    return this.authRepo.testVariable.map(pm => {
       return { test1: pm.test1 + '(mapped)', sub: pm.sub, test2: pm.test2 + '(mapped)' }
     })
   }
 
   get viewTest2 () {
-    return this.authenticationRepository.testVariable2
+    return this.authRepo.testVariable2
   }
 
   set viewTest (value) {
-    this.authenticationRepository.testVariable = value
+    this.authRepo.testVariable = value
   }
 
   setAuthRepoTest () {
-    this.authenticationRepository.testVariable.push(
+    this.authRepo.testVariable.push(
       { test1: 'test1!', test2: 'test1!', sub: { test: 'yes' } }
     )
   }
@@ -182,11 +182,11 @@ export class LoginRegisterPresenterAuto  {
   //
   set viewTest (value) {
     console.log('this!', this)
-    this.authenticationRepository.testVariable = value
+    this.authRepo.testVariable = value
   }
 
   setAuthRepoTest () {
-    this.authenticationRepository.testVariable.push(
+    this.authRepo.testVariable.push(
       { test1: 'test1!', test2: 'test1!', sub: { test: 'yes' } }
     )
   }
@@ -202,22 +202,22 @@ export class LoginRegisterPresenterAuto  {
   }
 
   setAuthRepoArrayKey () {
-    console.log('this.authenticationRepository.testVariable[0]', this.authenticationRepository.testVariable[0])
+    console.log('this.authRepo.testVariable[0]', this.authRepo.testVariable[0])
 
-    this.authenticationRepository.testVariable[0].sub.test = 'aaaaaaaaaaa';
-    this.authenticationRepository.testVariable[0].sub.rest = 'aaaaaaaaaaa';
+    this.authRepo.testVariable[0].sub.test = 'aaaaaaaaaaa';
+    this.authRepo.testVariable[0].sub.rest = 'aaaaaaaaaaa';
 
-    this.authenticationRepository.testVariable[0]
-      = notify(this.authenticationRepository.testVariable[0])
+    this.authRepo.testVariable[0]
+      = notify(this.authRepo.testVariable[0])
   }
 
   setInjectableObservableSubProperties () {
-    console.log('this.authenticationRepository.testVariable2', this.authenticationRepository.testVariable2)
-    this.authenticationRepository.testVariable2.awesome.super = 'test'
-    this.authenticationRepository.testVariable2.awesome.duper = 'test'
+    console.log('this.authRepo.testVariable2', this.authRepo.testVariable2)
+    this.authRepo.testVariable2.awesome.super = 'test'
+    this.authRepo.testVariable2.awesome.duper = 'test'
 
-    this.authenticationRepository.testVariable2
-      = notify(this.authenticationRepository.testVariable2)
+    this.authRepo.testVariable2
+      = notify(this.authRepo.testVariable2)
   }
 
   setObjectSubProperty () {
@@ -269,7 +269,7 @@ export class LoginRegisterPresenterAuto  {
   }
 
   async login () {
-    const loginPm = await this.authenticationRepository.login(this.email, this.password)
+    const loginPm = await this.authRepo.login(this.email, this.password)
 
     console.log('this', this)
     this.unpackRepositoryPmToVm(loginPm, 'User logged in')
@@ -280,14 +280,14 @@ export class LoginRegisterPresenterAuto  {
   }
 
   async register () {
-    const registerPm = await this.authenticationRepository.register(this.email, this.password)
+    const registerPm = await this.authRepo.register(this.email, this.password)
 
     console.log('this', this)
     this.unpackRepositoryPmToVm(registerPm, 'User registered')
   }
 
   async logOut () {
-    this.authenticationRepository.logOut()
+    this.authRepo.logOut()
     this.router.goToId('loginLink')
   }
 
@@ -307,16 +307,16 @@ export class LoginRegisterPresenterAuto  {
   }
 
   watchSomething = () => {
-    console.log(this.vm._objectReassign, isReactive(this.vm._objectReassign))
+    console.log(this.vm.objectReassign, isReactive(this.vm.objectReassign))
     // console.log('this.vm',  this.vm)
-    watch(this.vm._objectReassign, newValue => {
+    watch(this.vm.objectReassign, newValue => {
       console.log('watching...')
     }, { deep: true })
   }
 
 
   doArrayReassign () {
-    console.log('doArrayReassign', this._arrayReassign[0].newProp)
+    console.log('doArrayReassign', this.arrayReassign[0].newProp)
   }
 }
 
