@@ -1,6 +1,6 @@
 import { reactive, UnwrapNestedRefs, markRaw } from "vue";
 import { tryOnScopeDispose } from '@vueuse/core'
-import { reaction, observable, observe, computed, ObservableMap, ObservableSet, toJS } from 'mobx'
+import { reaction, observable, observe, computed, ObservableMap, ObservableSet, toJS, isObservable } from 'mobx'
 import { deepObserve } from "mobx-utils";
 import {
   clone,
@@ -42,6 +42,8 @@ export function shadowProp (prop): string {
  */
 function reassignUpdateVue (state, observable, newValue, opts) {
   // Set property of shadow state.
+
+  console.log('reassignUpdateVue', 'newValue', newValue, 'isObservable', isObservable(newValue))
   state[observable] = isObservableMapOrSet(newValue)
     // If it's an MobX's ObservbaleMap or ObservableSet, copy reference only!
     // Otherwise the reactivity to Observable values get lost
@@ -76,23 +78,31 @@ function deepUpdateVue (state, observable, change, path = '', root = null) {
 
   const ref = path === '' ? state[observable] : getByPath(state[observable], path)
 
+
+
   switch (change.type) {
     case 'add':
     case 'update':
+
+      // console.log('newValue', change.newValue, 'isObservable', isObservable(change.newValue))
+      const newValue = isObservable(change.newValue)
+        ? deepClone(change.newValue)
+        : change.newValue
+
       switch (change.observableKind) {
         case 'map': // Handles Maps
-          ref.set(change.name, deepClone(change.newValue));
+          ref.set(change.name, newValue);
           break;
         case 'set': // Handles Sets
-          ref.add(deepClone(change.newValue));
+          ref.add(newValue);
           break;
         default:
           if (typeof ref === "object") {
             if ('index' in change) { // Handles Arrays
-              ref[change.index] = deepClone(change.newValue);
+              ref[change.index] = newValue;
             }
             else { // Handles Objects
-              ref[change.name] = change.newValue;
+              ref[change.name] = newValue;
             }
           }
       }
@@ -107,7 +117,14 @@ function deepUpdateVue (state, observable, change, path = '', root = null) {
       break;
     case 'splice': // Handles Arrays .push, .pop, .splice, .unshift, .shift
       if (change.added.length) {
-        ref.splice(change.index, change.removedCount, ...deepClone(change.added))
+        const changeAdded = change.added
+          console.log('newValue', change.newValue, 'isObservable', isObservable(change.newValue))
+        for(let i =0; i < change.added.length; i++){
+
+          changeAdded[i] = isObservable(change.added[i])
+            ? deepClone(change.added[i]) : change.added[i]
+        }
+        ref.splice(change.index, change.removedCount, ...changeAdded)
       }
       else {
         ref.splice(change.index, change.removedCount)
@@ -304,10 +321,12 @@ export function useMobX<Store extends Record<string, any>> (obj, observables, op
           // Handle computed getters
           // Computed getters should be updated shallowly
           const computedHandler = newValue => {
-            reassignUpdateVue(vue, prop, newValue, opts)
+            console.log('computed handler')
+            //reassignUpdateVue(vue, prop, newValue, opts)
           }
 
           const computedObserveDisposer = reaction(() => {
+            // console.log('init', prop)
             // Computed is initialized into the Vue state only once!
             // right here when reaction is initialized
             vue[prop] = obj[prop]
@@ -402,6 +421,8 @@ export function useMobX<Store extends Record<string, any>> (obj, observables, op
      */
     get: (target, key): any => {
 
+
+      console.log('key', key)
       if (typeof target === 'object') {
 
         // Handle functions
@@ -506,6 +527,7 @@ export function useMobX<Store extends Record<string, any>> (obj, observables, op
      */
     get: (target, key): any => {
 
+      // console.log('key', key)
       if (typeof target === 'object') {
 
         let fn

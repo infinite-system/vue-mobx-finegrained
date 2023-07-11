@@ -6,6 +6,7 @@ import { UserModel } from './UserModel'
 import { MessagePacking } from '../Core/Messages/MessagePacking'
 import { RouterGateway } from "../Routing/RouterGateway";
 import { useMobX } from "@/useMobX";
+import { reactive } from "vue";
 
 @injectable()
 export class AuthenticationRepository {
@@ -16,7 +17,10 @@ export class AuthenticationRepository {
 
   @inject(UserModel) userModel: UserModel
 
-  testVariable = []
+
+  reactiveVar = reactive([])
+
+  testVariable = [{ test1: 'test1!', test2: 'test1!', sub: { test: 'yes' } }]
   testVariable2 = {
     awesome: {
       super: 'yes'
@@ -25,6 +29,7 @@ export class AuthenticationRepository {
 
   observables = {
     login: action,
+    reactiveVar:observable,
     testVariable: observable,
     testVariable2: observable
   }

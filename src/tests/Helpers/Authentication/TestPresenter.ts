@@ -5,7 +5,7 @@ import { MessagesPresenter } from '../Core/Messages/MessagesPresenter'
 import { MessagesRepository } from '../Core/Messages/MessagesRepository'
 import { Router } from '../Routing/Router'
 import { useMobX, notify } from '@/useMobX';
-import { isReactive, watch } from "vue";
+import { isReactive, reactive, watch } from "vue";
 import cloneDeep from "lodash/cloneDeep";
 
 @injectable()
@@ -20,14 +20,26 @@ export class TestPresenter extends MessagesPresenter {
 
   nonObservablePrimitive = 1
 
-  nonObservableObject = {
+  nonObservableObject = reactive({
     prop: {
       prop: {
         prop: 1
       }
     }
+  })
+
+  get reactiveVar () {
+    console.log('yes')
+    return this.authRepo.reactiveVar.map(el => ({
+      test: el.test, test2: el.test2
+    }))
   }
 
+  setReactiveVar() {
+    this.authRepo.reactiveVar.push({
+      test: 1, test2: 2
+    })
+  }
 
   @inject(AuthenticationRepository) authRepo: AuthenticationRepository
 
@@ -64,6 +76,7 @@ export class TestPresenter extends MessagesPresenter {
   }
 
   observables = {
+    reactiveVar: computed,
 
     string: observable,
     number: observable,
@@ -279,9 +292,9 @@ export class TestPresenter extends MessagesPresenter {
 
   get viewTest () {
     console.log('viewTest getter')
-    return this.authRepo.testVariable.map(pm => {
-      return { test1: pm.test1 + '(mapped)', sub: cloneDeep(pm.sub), test2: pm.test2 + '(mapped)' }
-    })
+    const res = this.authRepo.testVariable.filter(el => true)
+    console.log(res)
+    return res;
   }
 
   //
@@ -298,6 +311,7 @@ export class TestPresenter extends MessagesPresenter {
   }
 
   setAuthRepoTest () {
+    // this.authRepo.testVariable[0].test1 = 'test22'
     this.authRepo.testVariable.push(
       { test1: 'test1!', test2: 'test1!', sub: { test: 'yes' } }
     )

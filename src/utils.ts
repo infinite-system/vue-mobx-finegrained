@@ -184,7 +184,7 @@ export function getAllProperties (obj) {
     proto = Object.getPrototypeOf(proto.constructor.prototype)
   }
 
-  return allProps
+  return Array.from(new Set(allProps))
 }
 
 /**
