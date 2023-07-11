@@ -136,7 +136,7 @@ export function deepClone (obj) {
  * @param instance
  * @return { get: [...], set: [...], all: [...] }
  */
-export function getMagicProps (instance) {
+export function getMagicProperties (instance) {
 
   let proto = Object.getPrototypeOf(instance)
 

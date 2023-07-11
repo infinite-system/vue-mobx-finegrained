@@ -7,10 +7,17 @@ export class UserModel {
   email = null
   token = null
 
-  constructor() {
-    makeObservable(this, {
-      email: observable,
-      token: observable,
-    })
+  upperCaseEmail = ''
+
+  get _upperCaseEmail () {
+    return String(this.email).toUpperCase()
   }
+
+  dashedUppercaseEmail = ''
+
+  get _dashedUppercaseEmail () {
+    return this.upperCaseEmail.split('')
+  }
+
+  constructor () {}
 }

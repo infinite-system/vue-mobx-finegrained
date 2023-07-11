@@ -12,11 +12,13 @@ const pres:TestVue = container.get(TestVue)
 // reaction(() => pres._reactiveVar, newVal => {
 //   console.log('NEW', newVal)
 // })
-watch(() => pres._reactiveVar, newVal => {
+watch(() => pres.reactiveVar, newVal => {
   console.log('NEW', newVal)
 }, { deep: true })
 
 setInterval(() => {
+
+
   // pres.cacheReactiveVar.push({'test':'1', test2:'aa'})
 })
 // watch(() => pres.authRepo.reactiveVar, (newValue) => {
@@ -120,7 +122,7 @@ let i = 0
   {{pres.primitive}}
   <br />
   <!--  <vue-dd v-model="trying" />-->
-<!--    <vue-dd v-model="pres" get-all-properties />-->
+    <vue-dd v-model="pres" get-all-properties />
   {{pres.messagesObservables}}
   <br />
   <br />
@@ -130,12 +132,26 @@ let i = 0
   <!--  <button @click="pres.setReactiveVar2()">Set Reactive Var2</button>-->
 
   <br />
-<!--  {{ pres.authRepo.reactiveVar }}-->
-  <br />--------<br />
-  {{ pres._reactiveVar }}
+<input type="text" v-model="pres.authRepo.userModel.email" />
+  <br />
+  {{pres.authRepo.userModel.upperCaseEmail}}
+  <br />
+  {{pres.authRepo.userModel.dashedUppercaseEmail}}
+  <br />
+  <br />
+  <span v-for="i in pres.authRepo.userModel.dashedUppercaseEmail">
+    <span style="color:green">{{i}}</span>-
+  </span>
   <br />
 
-  <div v-for="el in pres._reactiveVar">
+
+  {{ pres.authRepo.reactiveVar }}
+  <br />--------<br />
+  {{ pres.reactiveVar }}
+  <vue-dd v-model="pres.reactiveVar" />
+  <br />
+
+  <div v-for="el in pres.reactiveVar">
     <input v-model="el.test" />
   </div>
   <br />
@@ -143,17 +159,17 @@ let i = 0
   <br />
   <br />
 
-  {{ pres._reactiveVar2 }}
+  {{ pres.reactiveVar2 }}
   <br />
-  <div v-for="el in pres._reactiveVar2">
-    <input v-model="el.test" /> <button @click="el.test='1111'">Set</button>
+  <div v-for="el in pres.reactiveVar2">
+<!--    <input v-model="el.test" /> <button @click="el.test='1111'">Set</button>-->
   </div>
 
 
   <button @click="pres.setCacheReactiveVar()">Set Reactive Var</button>
 
   <br />
-  {{ pres._reactiveVar3 }}
+  {{ pres.reactiveVar3 }}
   <button @click="pres.primitive++">Set Prim</button>
 
   <!--  <br />-->

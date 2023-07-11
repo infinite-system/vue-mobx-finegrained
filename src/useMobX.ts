@@ -10,7 +10,7 @@ import {
   deleteByPath,
   isObservableMapOrSet,
   getAllProperties,
-  getMagicProps
+  getMagicProperties
 } from "./utils.js";
 
 /**
@@ -213,7 +213,7 @@ export function useMobX<Store extends Record<string, any>> (obj, observables, op
   }
 
   // Get all the magic setters and getters from the object
-  const magicProps = getMagicProps(obj)
+  const magicProps = getMagicProperties(obj)
 
   // Get all the props from the source object & its prototype
   const allProps = getAllProperties(obj)

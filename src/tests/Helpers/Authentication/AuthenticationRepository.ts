@@ -18,7 +18,7 @@ export class AuthenticationRepository {
   @inject(UserModel) userModel: UserModel
 
 
-  reactiveVar = reactive([])
+  reactiveVar = []
 
   testVariable = [{ test1: 'test1!', test2: 'test1!', sub: { test: 'yes' } }]
   testVariable2 = {

@@ -5,8 +5,9 @@ import { MessagesPresenter } from '../Core/Messages/MessagesPresenter'
 import { MessagesRepository } from '../Core/Messages/MessagesRepository'
 import { Router } from '../Routing/Router'
 import { useMobX, notify } from '@/useMobX';
-import { isReactive, reactive, watch } from "vue";
+import { isReactive, markRaw, reactive, shallowReactive, shallowRef, toRaw, watch } from "vue";
 import cloneDeep from "lodash/cloneDeep";
+import { clone, deepClone } from "@/utils.js";
 
 @injectable()
 class ObservableClass {
@@ -40,10 +41,10 @@ export class TestVue extends ParentTestVue {
 
   overrides = {
     // authRepo: false,
-    messagesRepository: false,
-    router: false,
+    // messagesRepository: false,
+    // router: false,
     hugeArray: observable.shallow,
-    _reactiveVar: observable.shallow
+    reactiveVar: observable.shallow
   }
 
   @inject(ObservableClass) observableClass
@@ -59,7 +60,7 @@ export class TestVue extends ParentTestVue {
   constructor () {
     super()
 
-    for(let i =0; i<1500022;i++){
+    for(let i =0; i<22;i++){
       this.hugeArray.push({
         prop: 'test',
         struct: {
@@ -111,45 +112,41 @@ export class TestVue extends ParentTestVue {
 
   primitive = 1
 
-  array = reactive([1,2,3])
+  array = [1,2,3]
 
-  object = reactive({
+  object = {
     prop: {
       prop: {
         prop: 1
       }
     }
-  })
+  }
 
   i = 0
 
-  cacheReactiveVar = reactive([{test: 'ta', test2:'ta'}])
+  cacheReactiveVar = [{test: 'ta', test2:'ta'}]
 
-  _reactiveVar = reactive([])
-  get reactiveVar () {
+  reactiveVar = []
+  get _reactiveVar () {
     console.log('compute')
     // this.object.test = 1
-    return this.authRepo.reactiveVar.map(el => ({
-      test: el.test + 'nah ', test2: el.test2
-    }))
-  }
-
-  setCacheVar(val){
-    this.cacheReactiveVar = reactive(val)
-    console.log(this.cacheReactiveVar)
-    return this.cacheReactiveVar
+    return (this.authRepo.reactiveVar.map(el => ({
+      test: el.test + 'nah !', test2: el.test2,
+    })))
   }
 
 
-  _reactiveVar2 = reactive([])
-  get reactiveVar2 () {
+
+  reactiveVar2 = []
+  get _reactiveVar2 () {
     console.log('compute2')
-    return this._reactiveVar.map(el => ({
+    return this.reactiveVar.map(el => ({
       test: el.test+'+yahooo', test2:el.test2
     }))
   }
 
-  get reactiveVar3 () {
+  reactiveVar3 = 1
+  get _reactiveVar3 () {
     // console.log('compute3', this.primitive)
     return this.primitive
   }

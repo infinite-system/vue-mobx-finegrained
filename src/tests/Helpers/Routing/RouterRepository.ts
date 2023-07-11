@@ -58,9 +58,6 @@ export class RouterRepository {
   flatRoutes = {}
 
   constructor () {
-    makeObservable(this, {
-      currentRoute: observable,
-    })
   }
 
   flattenRoutes (routes, flatRoutes = {}) {
