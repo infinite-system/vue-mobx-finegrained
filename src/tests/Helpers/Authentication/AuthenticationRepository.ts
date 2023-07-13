@@ -18,7 +18,7 @@ export class AuthenticationRepository {
   @inject(UserModel) userModel: UserModel
 
 
-  reactiveVar = []
+  reactiveVar = [{test:'lala',test2:'rara'}]
 
   testVariable = [{ test1: 'test1!', test2: 'test1!', sub: { test: 'yes' } }]
   testVariable2 = {
@@ -27,15 +27,8 @@ export class AuthenticationRepository {
     }
   }
 
-  observables = {
-    login: action,
-    reactiveVar:observable,
-    testVariable: observable,
-    testVariable2: observable
-  }
-
   constructor() {
-    makeObservable(this, this.observables)
+    // makeObservable(this, this.observables)
     // useMobX(this, this.observables)
   }
 

@@ -3,12 +3,20 @@ import { onMounted, reactive, ref, watch, getCurrentInstance, nextTick, computed
 import { container } from '@/tests/Helpers/AppIOC'
 // import { TestPresenterAuto } from "../src/tests/Helpers/Authentication/TestPresenterAuto.js";
 // import { TestPresenter } from "../src/tests/Helpers/Authentication/TestPresenter.js";
-import { TestVue } from "../src/tests/Helpers/Authentication/TestVue.js";
+import { TestVue2 } from "../src/tests/Helpers/Authentication/TestVue2.js";
 import { deepClone } from '../src/utils'
 import { observe, reaction } from "mobx";
 
-const pres:TestVue = container.get(TestVue)
+const pres:TestVue2 = container.get(TestVue2)
+class O {
+  private test = 100
+  private func() {
+    alert(this.test)
+  }
+}
 
+const o = new O()
+console.log('pres', pres)
 // reaction(() => pres._reactiveVar, newVal => {
 //   console.log('NEW', newVal)
 // })
@@ -16,9 +24,22 @@ watch(() => pres.reactiveVar?.[0]?.test, newVal => {
   console.log('NEW', newVal)
 }, { deep: true })
 
+
+const val = computed(() => {
+  return pres.reactiveVar?.[0]?.test
+})
+
+  // console.log(val.effect.stop())
+
+setTimeout(() => {
+// pres.private()
+//   o.func()
+  // pres.reactiveVar3++
+  // pres.cacheReactiveVar.push({'test':'1', test2:'aa'})
+}, 100)
 setInterval(() => {
 
-
+  // pres.reactiveVar3++
   // pres.cacheReactiveVar.push({'test':'1', test2:'aa'})
 })
 // watch(() => pres.authRepo.reactiveVar, (newValue) => {
@@ -96,7 +117,7 @@ setTimeout(() => {
 
 
 setInterval(() => {
-  pres.primitive++
+  // pres.primitive++
 }, 100)
 // setTimeout(() => {
 //
@@ -120,6 +141,9 @@ let i = 0
 
   {{pres.object.prop.prop.prop}}
   {{pres.primitive}}
+  <br />
+  val:
+  {{val}}
   <br />
   <!--  <vue-dd v-model="trying" />-->
     <vue-dd v-model="pres" get-all-properties />
@@ -148,7 +172,7 @@ let i = 0
   {{ pres.authRepo.reactiveVar }}
   <br />--------<br />
   {{ pres.reactiveVar }}
-  <vue-dd v-model="pres.reactiveVar" />
+<!--  <vue-dd v-model="pres.reactiveVar" />-->
   <br />
 
   <div v-for="el in pres.reactiveVar">
@@ -162,11 +186,11 @@ let i = 0
   {{ pres.reactiveVar2 }}
   <br />
   <div v-for="el in pres.reactiveVar2">
-<!--    <input v-model="el.test" /> <button @click="el.test='1111'">Set</button>-->
+    <input v-model="el.test" /> <button @click="el.test='1111'">Set</button>
   </div>
 
 
-  <button @click="pres.setCacheReactiveVar()">Set Reactive Var</button>
+  <button @click="pres.setReactiveVar2()">Set Reactive Var</button>
 
   <br />
   {{ pres.reactiveVar3 }}

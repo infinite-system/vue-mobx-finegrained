@@ -1,7 +1,7 @@
 import 'reflect-metadata'
 import { createApp } from "vue";
 import { useMobX } from "../src/useMobX.ts";
-import App from "./App.vue";
+import App from "./App_3.vue";
 import { VueDd } from 'vue-dd'
 import { container } from '@/tests/Helpers/AppIOC'
 import { configure } from 'mobx'

@@ -7,15 +7,11 @@ export class UserModel {
   email = null
   token = null
 
-  upperCaseEmail = ''
-
-  get _upperCaseEmail () {
+  get upperCaseEmail () {
     return String(this.email).toUpperCase()
   }
 
-  dashedUppercaseEmail = ''
-
-  get _dashedUppercaseEmail () {
+  get dashedUppercaseEmail () {
     return this.upperCaseEmail.split('')
   }
 

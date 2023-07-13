@@ -7,13 +7,107 @@ import { NavigationRepository } from './Navigation/NavigationRepository'
 import { AppPresenter } from './AppPresenter'
 import { TestPresenter } from "./Authentication/TestPresenter.js";
 import { TestVue } from "./Authentication/TestVue.js";
-import { markRaw, reactive, shallowReactive, shallowRef } from "vue";
+import { TestVue2 } from "./Authentication/TestVue2.js";
+import { markRaw, reactive, shallowReactive, shallowRef, computed, effectScope } from "vue";
 import { getAllProperties, getMagicProperties, isObservableMapOrSet } from "@/utils.js";
-import { action, computed, extendObservable, observable, reaction, runInAction } from "mobx";
+import { action, extendObservable, observable, reaction, runInAction } from "mobx";
 import { AuthenticationRepository } from "@/tests/Helpers/Authentication/AuthenticationRepository.js";
 import { tryOnScopeDispose } from "@vueuse/core";
 
 function mobXtoVue (ctx, obj) {
+
+
+  const props = getAllProperties(obj)
+  const magicProps = getMagicProperties(obj)
+  const hasOverrides = 'overrides' in obj
+
+  // obj.constructor.prototype.constructor = function(){}
+  let vue = Object.create(obj);
+  let getters = []
+
+  for (let i = 0; i < props.length; i++) {
+
+    const prop = props[i]
+    if (prop === 'constructor') continue
+
+    if (typeof magicProps.get[prop] !== 'undefined') {
+      getters.push(prop)
+      continue
+    }
+
+    vue[prop] = typeof obj[prop] === 'function'
+      ? obj[prop].bind(vue)
+      : (
+        hasOverrides && prop in obj.overrides && obj.overrides[prop] === observable.shallow
+          ? markRaw(obj[prop])
+          : obj[prop]
+      )
+  }
+
+
+  //
+  if (hasOverrides) {
+    obj.overrides = markRaw(obj.overrides)
+    obj.overrides['overrides'] = false
+  }
+  let computeds = {}
+  const scope = effectScope()
+
+  scope.run(() => {
+    for (let i = 0; i < getters.length; i++) {
+
+      const prop = getters[i]
+      // console.log('Object.getOwnPropertyDescriptor(obj, prop)', prop, Object.getOwnPropertyDescriptor(obj.constructor.prototype, prop))
+
+      if (hasOverrides && prop in obj.overrides && obj.overrides[prop] === false)
+        continue
+
+      const descriptors = Object.getOwnPropertyDescriptor(obj.constructor.prototype, prop)
+
+      computeds[prop] = null
+      Object.defineProperty(vue, prop, {
+        get: function () {
+          if (computeds[prop]) {
+            return computeds[prop].value
+          }
+          else {
+            computeds[prop] = computed(() => {
+              return descriptors.get.bind(vue)()
+            })
+            return computeds[prop]
+          }
+
+        },
+        set: descriptors.set?.bind(vue),
+        enumerable: descriptors.enumerable,
+        configurable: descriptors.configurable
+      })
+    }
+
+    // if ('init' in obj) {
+    //   vue.init()
+    // }
+
+
+  })
+
+  tryOnScopeDispose(() => {
+    scope.stop()
+  })
+
+  // if ('name' in obj.constructor) {
+  //   vue.constructor.name = obj.constructor.name
+  // }
+  vue = reactive(vue)
+
+  return vue
+
+
+  // return vue;
+}
+
+
+function mobXtoVueOld (ctx, obj) {
 
   const props = getAllProperties(obj)
   const magicProps = getMagicProperties(obj)
@@ -51,8 +145,14 @@ function mobXtoVue (ctx, obj) {
   extendObservable(vue, vue, obj.overrides)
   // console.log('vue', vue, 'overrides', obj.overrides)
 
-  getters.forEach(prop => {
+  for (let i = 0; i < getters.length; i++) {
+
+    const prop = getters[i]
     // console.log('Object.getOwnPropertyDescriptor(obj, prop)', prop, Object.getOwnPropertyDescriptor(obj.constructor.prototype, prop))
+
+    if (hasOverrides && prop in obj.overrides && obj.overrides[prop] === false)
+      continue
+
     const descriptors = Object.getOwnPropertyDescriptor(obj.constructor.prototype, prop)
 
     Object.defineProperty(vue, prop, {
@@ -75,10 +175,11 @@ function mobXtoVue (ctx, obj) {
       computedObserveDisposer()
     })
 
-  })
+  }
 
   return vue;
 }
+
 
 export class BaseIOC {
   container
@@ -100,6 +201,7 @@ export class BaseIOC {
     this.container.bind(AppPresenter).to(AppPresenter).inSingletonScope()
     this.container.bind(TestPresenter).to(TestPresenter).inSingletonScope()
     this.container.bind(TestVue).to(TestVue).inSingletonScope().onActivation(mobXtoVue);
+    this.container.bind(TestVue2).to(TestVue2).inSingletonScope().onActivation(mobXtoVue);
     this.container.bind(AuthenticationRepository).to(AuthenticationRepository).inSingletonScope().onActivation(mobXtoVue);
 
     return this.container
