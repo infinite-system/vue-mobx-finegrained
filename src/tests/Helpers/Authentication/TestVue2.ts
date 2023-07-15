@@ -8,7 +8,11 @@ import { useMobX, notify } from '@/useMobX';
 import { isReactive, markRaw, reactive, computed, shallowReactive, shallowRef, toRaw, watch } from "vue";
 import cloneDeep from "lodash/cloneDeep";
 import { clone, deepClone } from "@/utils.js";
+import { AppPresenter } from "@/tests/Helpers/AppPresenter";
 
+import { container, lazyInject } from '@/tests/Helpers/Container'
+import { Types } from "@/tests/Helpers/Core/Types.js";
+// const { lazyInject } = getDecorators(container, false);
 @injectable()
 class ObservableClass {
   hello = 1
@@ -52,6 +56,8 @@ export class TestVue2 extends ParentTestVue {
   @inject(ObservableClass) observableClass
 
   @inject(AuthenticationRepository) authRepo: AuthenticationRepository
+  @lazyInject(AppPresenter) app: AppPresenter
+  // @lazyInject(AppPresenter) app: AppPresenter
 
   @inject(MessagesRepository) messagesRepository: MessagesRepository
 
@@ -63,8 +69,8 @@ export class TestVue2 extends ParentTestVue {
     super()
 
     console.log("RUN ONCE")
-    for(let i =0; i<40002;i++){
-      this.hugeArray.push({
+    for(let i =0; i<22;i++){
+      this.hugeArray.push(markRaw({
         prop: 'test',
         struct: {
 
@@ -107,12 +113,19 @@ export class TestVue2 extends ParentTestVue {
             }
           }
         }
-      })
+      }))
 
     }
   }
 
 
+  setup(){
+    watch(() => this.primitive, newValue => {
+      if (newValue === 10) {
+        console.log('yoo', newValue)
+      }
+    })
+  }
 
   primitive = 1
 
@@ -143,9 +156,9 @@ export class TestVue2 extends ParentTestVue {
   get reactiveVar () {
     console.log('compute')
     // this.object.test = 1
-    return this.authRepo.reactiveVar.map(el => ({
+    return this.authRepo.reactiveVar.map(el => (markRaw({
       test: el.test+'+v1', test2:el.test2
-    }))
+    })))
 
   }
 
@@ -155,6 +168,12 @@ export class TestVue2 extends ParentTestVue {
     return this.reactiveVar.map(el => ({
       test: el.test+'+yahooo', test2:el.test2
     }))
+  }
+
+  get reactiveRow() {
+
+    delete this.reactiveVar[0].__v_skip;
+    return this.reactiveVar[0]
   }
 
   get reactiveVar3 () {
@@ -176,6 +195,8 @@ export class TestVue2 extends ParentTestVue {
     //   test: 1, test2: 2
     // })
   }
+
+
 
   setCacheReactiveVar() {
 

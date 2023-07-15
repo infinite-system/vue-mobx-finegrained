@@ -3,23 +3,24 @@ import { action, computed, makeObservable } from 'mobx'
 import { MessagesRepository } from '../Core/Messages/MessagesRepository'
 import { RouterRepository } from './RouterRepository'
 import { UserModel } from '../Authentication/UserModel'
-
+import { AppPresenter } from "@/tests/Helpers/AppPresenter.js";
+// import getDecorators from 'inversify-inject-decorators';
+import { container, lazyInject } from '@/tests/Helpers/Container'
 @injectable()
 export class Router {
 
+
   @inject(RouterRepository) routerRepository: RouterRepository
-  @inject(UserModel) userModel: UserModel
-  @inject(MessagesRepository) messagesRepository: MessagesRepository
+  @lazyInject(UserModel) userModel: UserModel
+  @inject(MessagesRepository) messagesRepository
+    : MessagesRepository
 
   get currentRoute() {
     return this.routerRepository.currentRoute
   }
 
   constructor() {
-    makeObservable(this, {
-      currentRoute: computed,
-      updateCurrentRoute: action,
-    })
+
   }
 
    updateCurrentRoute = async (newRouteId, params, query)  => {

@@ -46,6 +46,7 @@
     "eslint": "^8.39.0",
     "eslint-plugin-vue": "^9.11.0",
     "inversify": "^6.0.1",
+    "inversify-inject-decorators": "^3.1.0",
     "jsdom": "^22.0.0",
     "lodash": "^4.17.21",
     "mobx": "^6.9.0",

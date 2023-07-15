@@ -14,11 +14,7 @@ export class AppPresenter {
     return this.router.currentRoute
   }
 
-  constructor () {
-    makeObservable(this, {
-      currentRoute: computed,
-    })
-  }
+  constructor () {}
 
   load (onRouteChange = () => {}) {
 

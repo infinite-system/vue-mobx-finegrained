@@ -13,6 +13,20 @@ import { getAllProperties, getMagicProperties, isObservableMapOrSet } from "@/ut
 import { action, extendObservable, observable, reaction, runInAction } from "mobx";
 import { AuthenticationRepository } from "@/tests/Helpers/Authentication/AuthenticationRepository.js";
 import { tryOnScopeDispose } from "@vueuse/core";
+import { container } from './container.ts'
+
+
+function beforeAction (fn, args) {
+  console.log('after', fn, args)
+}
+
+function afterAction (fn, args, result) {
+  console.log('after', fn, args, result)
+  if (!fn?.__afterEffect__){
+    fn.__afterEffect__ = []
+  }
+  // fn.__afterEffect__ =
+}
 
 function mobXtoVue (ctx, obj) {
 
@@ -20,90 +34,80 @@ function mobXtoVue (ctx, obj) {
   const props = getAllProperties(obj)
   const magicProps = getMagicProperties(obj)
   const hasOverrides = 'overrides' in obj
+  const overrides = 'overrides' in obj ? obj.overrides : {}
 
-  // obj.constructor.prototype.constructor = function(){}
-  let vue = Object.create(obj);
-  let getters = []
+  const vue = reactive(Object.create(obj))
 
   for (let i = 0; i < props.length; i++) {
-
     const prop = props[i]
     if (prop === 'constructor') continue
-
-    if (typeof magicProps.get[prop] !== 'undefined') {
-      getters.push(prop)
-      continue
-    }
+    if (prop in magicProps.get) continue
 
     vue[prop] = typeof obj[prop] === 'function'
-      ? obj[prop].bind(vue)
-      : (
-        hasOverrides && prop in obj.overrides && obj.overrides[prop] === observable.shallow
-          ? markRaw(obj[prop])
-          : obj[prop]
-      )
+      ? function (...args) {
+        const savedArgs = [...args]
+        beforeAction(obj[prop], savedArgs)
+        const savedResult = obj[prop].bind(vue)(...args)
+        afterAction(obj[prop], savedArgs, savedResult)
+        return savedResult
+      }
+      : (overrides?.[prop] === false ? markRaw(obj[prop]) : obj[prop])
   }
 
-
-  //
   if (hasOverrides) {
     obj.overrides = markRaw(obj.overrides)
-    obj.overrides['overrides'] = false
   }
-  let computeds = {}
-  const scope = effectScope()
 
-  scope.run(() => {
-    for (let i = 0; i < getters.length; i++) {
+  const computeds = {}
+  const scope = {}
 
-      const prop = getters[i]
-      // console.log('Object.getOwnPropertyDescriptor(obj, prop)', prop, Object.getOwnPropertyDescriptor(obj.constructor.prototype, prop))
+  for (const prop in magicProps.get) {
 
-      if (hasOverrides && prop in obj.overrides && obj.overrides[prop] === false)
-        continue
+    if (overrides?.[prop] === false) continue
 
-      const descriptors = Object.getOwnPropertyDescriptor(obj.constructor.prototype, prop)
+    const descriptors = Object.getOwnPropertyDescriptor(obj.constructor.prototype, prop)
 
-      computeds[prop] = null
-      Object.defineProperty(vue, prop, {
-        get: function () {
-          if (computeds[prop]) {
-            return computeds[prop].value
-          }
-          else {
+    computeds[prop] = null
+
+    Object.defineProperty(vue, prop, {
+      get: function () {
+        if (computeds[prop]) {
+          return computeds[prop].value
+        }
+        else {
+          scope[prop] = effectScope()
+          scope[prop].run(() => {
             computeds[prop] = computed(() => {
               return descriptors.get.bind(vue)()
             })
-            return computeds[prop]
-          }
+          })
+          tryOnScopeDispose(() => {
+            scope[prop].stop()
+          })
+          return computeds[prop]
+        }
+      },
+      set: descriptors.set?.bind(vue),
+      enumerable: descriptors.enumerable,
+      configurable: descriptors.configurable
+    })
 
-        },
-        set: descriptors.set?.bind(vue),
-        enumerable: descriptors.enumerable,
-        configurable: descriptors.configurable
-      })
-    }
-
-    // if ('init' in obj) {
-    //   vue.init()
-    // }
+  }
 
 
-  })
+  if ('setup' in vue && typeof vue?.setup === 'function') {
+    const setupScope = effectScope()
 
-  tryOnScopeDispose(() => {
-    scope.stop()
-  })
+    setupScope.run(() => {
+      vue?.setup()
+    })
 
-  // if ('name' in obj.constructor) {
-  //   vue.constructor.name = obj.constructor.name
-  // }
-  vue = reactive(vue)
+    tryOnScopeDispose(() => {
+      setupScope.stop()
+    })
+  }
 
   return vue
-
-
-  // return vue;
 }
 
 
@@ -185,10 +189,7 @@ export class BaseIOC {
   container
 
   constructor () {
-    this.container = new Container({
-      autoBindInjectable: true,
-      defaultScope: 'Transient',
-    })
+    this.container = container
   }
 
   buildBaseTemplate = () => {

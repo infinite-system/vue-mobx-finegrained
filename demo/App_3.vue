@@ -7,6 +7,10 @@ import { TestVue2 } from "../src/tests/Helpers/Authentication/TestVue2.js";
 import { deepClone } from '../src/utils'
 import { observe, reaction } from "mobx";
 
+function on(fn, { result, args }){
+  console.log()
+}
+
 const pres:TestVue2 = container.get(TestVue2)
 class O {
   private test = 100
@@ -39,6 +43,7 @@ setTimeout(() => {
 }, 100)
 setInterval(() => {
 
+  // pres.primitive++
   // pres.reactiveVar3++
   // pres.cacheReactiveVar.push({'test':'1', test2:'aa'})
 })
@@ -145,12 +150,16 @@ let i = 0
   val:
   {{val}}
   <br />
-  <!--  <vue-dd v-model="trying" />-->
+<!--    <vue-dd v-model="trying" />-->
     <vue-dd v-model="pres" get-all-properties />
   {{pres.messagesObservables}}
   <br />
   <br />
   <br />
+
+<!--  <div v-for="i in pres.hugeArray">-->
+<!--    {{i.prop}}-->
+<!--  </div>-->
 
   <button @click="pres.setReactiveVar()">Set Reactive Var</button>
   <!--  <button @click="pres.setReactiveVar2()">Set Reactive Var2</button>-->
@@ -180,6 +189,10 @@ let i = 0
   </div>
   <br />
   <br />
+
+  reactiveRow:
+  {{ pres.reactiveRow}}
+  <input v-model="pres.reactiveRow.test" />
   <br />
   <br />
 
